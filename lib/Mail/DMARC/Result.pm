@@ -1,8 +1,7 @@
 package Mail::DMARC::Result;
 {
-  $Mail::DMARC::Result::VERSION = '0.131260';
+  $Mail::DMARC::Result::VERSION = '0.20130506';
 }
-# ABSTRACT: DMARC processing results
 use strict;
 use warnings;
 
@@ -32,7 +31,7 @@ sub evaluated {
 };
 
 1;
-
+# ABSTRACT: DMARC processing results
 
 
 =pod
@@ -43,7 +42,7 @@ Mail::DMARC::Result - DMARC processing results
 
 =head1 VERSION
 
-version 0.131260
+version 0.20130506
 
 =head1 METHDS
 
@@ -65,7 +64,7 @@ Matt Simerson <msimerson@cpan.org>
 
 =item *
 
-Davide Migliavacca <davide.migliavacca@contactlab.com>
+Davide Migliavacca <shari@cpan.org>
 
 =back
 

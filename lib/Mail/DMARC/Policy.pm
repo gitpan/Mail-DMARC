@@ -1,13 +1,13 @@
 package Mail::DMARC::Policy;
 {
-  $Mail::DMARC::Policy::VERSION = '0.131260';
+  $Mail::DMARC::Policy::VERSION = '0.20130506';
 }
-# ABSTRACT: a DMARC policy in object format
-
 use strict;
 use warnings;
 
 use Carp;
+
+use Mail::DMARC::URI;
 
 sub new {
     my ($class, @args) = @_;
@@ -84,15 +84,14 @@ sub fo {
 
 sub rua {
     return $_[0]->{rua} if 1 == scalar @_;
+    croak "invalid rua" if ! $_[0]->is_valid_uri_list( $_[1] );
     return $_[0]->{rua} = $_[1];
-#TODO: validate as comma spaced list of URIs
 };
-
 
 sub ruf {
     return $_[0]->{ruf} if 1 == scalar @_;
+    croak "invalid rua" if ! $_[0]->is_valid_uri_list( $_[1] );
     return $_[0]->{ruf} = $_[1];
-#TODO: validate as comma spaced list of URIs
 };
 
 sub rf {
@@ -129,6 +128,13 @@ sub is_valid_p {
     return (grep {/^$p$/i} qw/ none reject quarantine /) ? 1 : 0;
 };
 
+sub is_valid_uri_list {
+    my ($self, $str) = @_;
+    $self->{uri} ||= Mail::DMARC::URI->new;
+    my $uris = $self->{uri}->parse( $str );
+    return scalar @$uris;
+};
+
 sub is_valid {
     my ($self, $obj) = @_;
     $obj = $self if ! $obj;
@@ -141,7 +147,7 @@ sub is_valid {
 };
 
 1;
-
+# ABSTRACT: a DMARC policy in object format
 
 
 =pod
@@ -152,7 +158,7 @@ Mail::DMARC::Policy - a DMARC policy in object format
 
 =head1 VERSION
 
-version 0.131260
+version 0.20130506
 
 =head1 EXAMPLES
 
@@ -390,7 +396,7 @@ Matt Simerson <msimerson@cpan.org>
 
 =item *
 
-Davide Migliavacca <davide.migliavacca@contactlab.com>
+Davide Migliavacca <shari@cpan.org>
 
 =back
 

@@ -2,7 +2,7 @@
 abstract: 'Perl implementation of DMARC'
 author:
   - 'Matt Simerson <msimerson@cpan.org>'
-  - 'Davide Migliavacca <davide.migliavacca@contactlab.com>'
+  - 'Davide Migliavacca <shari@cpan.org>'
 build_requires:
   Data::Dumper: 0
   Test::More: 0
@@ -19,8 +19,9 @@ requires:
   Carp: 0
   IO::File: 0
   Net::DNS::Resolver: 0
-  Regexp::Common: 0
+  Regexp::Common: 2013031301
+  URI: 0
   parent: 0
   strict: 0
   warnings: 0
-version: 0.131260
+version: 0.20130506

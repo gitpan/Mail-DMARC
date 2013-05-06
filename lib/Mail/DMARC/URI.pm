@@ -1,17 +1,55 @@
 package Mail::DMARC::URI;
 {
-  $Mail::DMARC::URI::VERSION = '0.131260';
+  $Mail::DMARC::URI::VERSION = '0.20130506';
 }
-# ABSTRACT: a DMARC reporting URI
 use strict;
 use warnings;
 
+use Carp;
+use URI;
+
+use parent 'Mail::DMARC';
+
+sub parse {
+    my ($self, $str) = @_;
+
+    my @valids = ();
+    foreach my $raw ( split /,/, $str ) {
+        my ($u, $size_f) = split /!/, $raw;
+        my $bytes = $self->get_size_limit($size_f);
+        my $uri = URI->new($u);
+        if ( $uri->scheme eq 'mailto' && lc substr($u, 0, 7) eq 'mailto:' ) {
+            push @valids, { max_bytes => $bytes, uri => $uri };
+            next;
+        };
+        if ( $uri->scheme =~ /^http(s)?/x && lc substr($u, 0, 4) eq 'http') {
+            push @valids, { max_bytes => $bytes, uri => $uri };
+            next;
+        };
+        croak "invalid URI: $u";
+    };
+    return \@valids;
+};
+
+sub get_size_limit {
+    my ($self, $size) = @_;
+    return 0 if ! defined $size;       # no limit
+    return $size if $size =~ /^\d+$/;  # no units, raw byte count
+
+# 6.3 Formal Definition
+# units are considered to be powers of two; a kilobyte is 2^10, a megabyte is 2^20,
+    my $unit = lc chop $size;
+    return $size * (2 ** 10) if 'k' eq $unit;
+    return $size * (2 ** 20) if 'm' eq $unit;
+    return $size * (2 ** 30) if 'g' eq $unit;
+    return $size * (2 ** 40) if 't' eq $unit;
+    croak "unrecognized unit ($unit) in size ($size)";
+};
 
 1;
+# ABSTRACT: a DMARC reporting URI
 
 
-
-__END__
 =pod
 
 =head1 NAME
@@ -20,7 +58,7 @@ Mail::DMARC::URI - a DMARC reporting URI
 
 =head1 VERSION
 
-version 0.131260
+version 0.20130506
 
 =head1 DESCRIPTION
 
@@ -50,6 +88,21 @@ report payload does not exceed 50 megabytes.
 
 A formal definition is provided in Section 6.3.
 
+=head1 ABNF
+
+  dmarc-uri = URI [ "!" 1*DIGIT [ "k" / "m" / "g" / "t" ] ]
+            ; "URI" is imported from [URI]; commas (ASCII 0x2c)
+            ; and exclamation points (ASCII 0x21) MUST be encoded
+
+URI is imported from RFC 3986: https://www.ietf.org/rfc/rfc3986.txt
+
+Only mailto, http, and https URIs are currently supported, examples:
+
+    https://www.ietf.org/rfc/rfc3986.txt
+    mailto:John.Doe@example.com
+
+With an optional size limit (see SIZE LIMIT).
+
 =head1 SIZE LIMIT
 
 A size limitation in a dmarc-uri, if provided, is interpreted as a
@@ -69,7 +122,7 @@ Matt Simerson <msimerson@cpan.org>
 
 =item *
 
-Davide Migliavacca <davide.migliavacca@contactlab.com>
+Davide Migliavacca <shari@cpan.org>
 
 =back
 
@@ -81,4 +134,9 @@ This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
+
+
+__END__
+sub {}
+
 

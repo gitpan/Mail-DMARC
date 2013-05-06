@@ -1,15 +1,13 @@
 package Mail::DMARC;
 {
-  $Mail::DMARC::VERSION = '0.131260';
+  $Mail::DMARC::VERSION = '0.20130506';
 }
-# ABSTRACT: Perl implementation of DMARC
 use strict;
 use warnings;
 
 use Carp;
 
 use Mail::DMARC::DNS;
-
 
 sub new {
     my ($class, @args) = @_;
@@ -130,7 +128,7 @@ sub validate {
 };
 
 1;
-
+# ABSTRACT: Perl implementation of DMARC
 
 
 =pod
@@ -141,7 +139,7 @@ Mail::DMARC - Perl implementation of DMARC
 
 =head1 VERSION
 
-version 0.131260
+version 0.20130506
 
 =head1 SYNOPSIS
 
@@ -330,7 +328,7 @@ Matt Simerson <msimerson@cpan.org>
 
 =item *
 
-Davide Migliavacca <davide.migliavacca@contactlab.com>
+Davide Migliavacca <shari@cpan.org>
 
 =back
 

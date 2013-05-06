@@ -1,16 +1,15 @@
 package Mail::DMARC::Report;
 {
-  $Mail::DMARC::Report::VERSION = '0.131260';
+  $Mail::DMARC::Report::VERSION = '0.20130506';
 }
-# ABSTRACT: A DMARC report object
 use strict;
 use warnings;
 
 
-
 1;
+# ABSTRACT: A DMARC report object
 
-__END__
+
 =pod
 
 =head1 NAME
@@ -19,7 +18,7 @@ Mail::DMARC::Report - A DMARC report object
 
 =head1 VERSION
 
-version 0.131260
+version 0.20130506
 
 =head1 SYNOPSIS
 
@@ -221,7 +220,7 @@ Matt Simerson <msimerson@cpan.org>
 
 =item *
 
-Davide Migliavacca <davide.migliavacca@contactlab.com>
+Davide Migliavacca <shari@cpan.org>
 
 =back
 
@@ -234,3 +233,9 @@ the same terms as the Perl 5 programming language system itself.
 
 =cut
 
+
+__END__
+
+
+
+1;

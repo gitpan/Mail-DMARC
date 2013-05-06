@@ -1,8 +1,7 @@
 package Mail::DMARC::Result::Evaluated;
 {
-  $Mail::DMARC::Result::Evaluated::VERSION = '0.131260';
+  $Mail::DMARC::Result::Evaluated::VERSION = '0.20130506';
 }
-# ABSTRACT: the results of applying a DMARC policy
 use strict;
 use warnings;
 
@@ -68,9 +67,8 @@ sub result {
     return $_[0]->{result} = $_[1];
 };
 
-
 1;
-
+# ABSTRACT: the results of applying a DMARC policy
 
 
 =pod
@@ -81,7 +79,7 @@ Mail::DMARC::Result::Evaluated - the results of applying a DMARC policy
 
 =head1 VERSION
 
-version 0.131260
+version 0.20130506
 
 =head1 OVERVIEW
 
@@ -156,7 +154,7 @@ Matt Simerson <msimerson@cpan.org>
 
 =item *
 
-Davide Migliavacca <davide.migliavacca@contactlab.com>
+Davide Migliavacca <shari@cpan.org>
 
 =back
 

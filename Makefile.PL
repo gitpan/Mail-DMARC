@@ -10,7 +10,7 @@ use ExtUtils::MakeMaker 6.30;
 
 my %WriteMakefileArgs = (
   "ABSTRACT" => "Perl implementation of DMARC",
-  "AUTHOR" => "Matt Simerson <msimerson\@cpan.org>, Davide Migliavacca <davide.migliavacca\@contactlab.com>",
+  "AUTHOR" => "Matt Simerson <msimerson\@cpan.org>, Davide Migliavacca <shari\@cpan.org>",
   "BUILD_REQUIRES" => {},
   "CONFIGURE_REQUIRES" => {
     "ExtUtils::MakeMaker" => "6.30"
@@ -23,7 +23,8 @@ my %WriteMakefileArgs = (
     "Carp" => 0,
     "IO::File" => 0,
     "Net::DNS::Resolver" => 0,
-    "Regexp::Common" => 0,
+    "Regexp::Common" => "2013031301",
+    "URI" => 0,
     "parent" => 0,
     "strict" => 0,
     "warnings" => 0
@@ -32,7 +33,7 @@ my %WriteMakefileArgs = (
     "Data::Dumper" => 0,
     "Test::More" => 0
   },
-  "VERSION" => "0.131260",
+  "VERSION" => "0.20130506",
   "test" => {
     "TESTS" => "t/*.t"
   }

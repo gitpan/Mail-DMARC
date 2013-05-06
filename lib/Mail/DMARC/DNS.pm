@@ -1,8 +1,7 @@
 package Mail::DMARC::DNS;
 {
-  $Mail::DMARC::DNS::VERSION = '0.131260';
+  $Mail::DMARC::DNS::VERSION = '0.20130506';
 }
-# ABSTRACT: DNS functions for DMARC
 
 use strict;
 use warnings;
@@ -11,8 +10,6 @@ use Carp;
 use IO::File;
 use Net::DNS::Resolver;
 use Regexp::Common qw /net/;
-
-use lib 'lib';
 
 sub new {
     my $class = shift;
@@ -80,6 +77,8 @@ sub get_resolver {
 
 sub is_valid_ip {
     my ($self, $ip) = @_;
+
+# If Regexp::Common proves problematic, Net::IP is a GREAT way to validate IPs
     if ( $ip =~ /:/ ) {
         return 1 if $ip =~ /^$RE{net}{IPv6}$/x;
         return 0;
@@ -93,18 +92,17 @@ sub is_valid_domain {
     my ($self, $domain) = @_;
     if ( $domain =~ /^$RE{net}{domain}{-rfc1101}{-nospace}$/x ) {
         my $tld = (split /\./,$domain)[-1];
-#warn "tld: $tld\n";
-        return 1 if Mail::DMARC::DNS::is_public_suffix(undef,$tld);
+        return 1 if $self->is_public_suffix($tld);
         $tld = join('.', (split /\./,$domain)[-2,-1] );
-#warn "tld: $tld\n";
-        return 1 if Mail::DMARC::DNS::is_public_suffix(undef,$tld);
+        return 1 if $self->is_public_suffix($tld);
     };
     return 0;
 };
 
 1;
+# ABSTRACT: DNS functions for DMARC
 
-__END__
+
 =pod
 
 =head1 NAME
@@ -113,7 +111,39 @@ Mail::DMARC::DNS - DNS functions for DMARC
 
 =head1 VERSION
 
-version 0.131260
+version 0.20130506
+
+=head1 METHODS
+
+=head2 is_public_suffix
+
+Determines if part of a domain is a Top Level Domain (TLD). Examples of TLDs are com, net, org, co.ok, am, and us.
+
+Determination is made by consulting a Public Suffix List. The included PSL is from mozilla.org. See http://publicsuffix.org/list/ for more information, and a link to download the latest PSL.
+
+The authors of this module anticipate adding a function to this class which will periodically update the PSL.
+
+=head2 has_dns_rr
+
+Determine if a DNS Resource Record of the specified type exists at the DNS name provided.
+
+=head2 get_resolver
+
+Returns a (cached) Net::DNS::Resolver object
+
+=head2 is_valid_ip
+
+Determines if the supplied IP address is a valid IPv4 or IPv6 address.
+
+=head2 is_valid_domain
+
+Determine if a string is a legal RFC 1034 or 1101 host name.
+
+Half the reason to test for domain validity is to shave seconds off our processing time by not having to process DNS queries for illegal host names. The other half is to raise exceptions if methods are being called incorrectly.
+
+=head1 SEE ALSO
+
+Mozilla Public Suffix List: http://publicsuffix.org/list/
 
 =head1 AUTHORS
 
@@ -125,7 +155,7 @@ Matt Simerson <msimerson@cpan.org>
 
 =item *
 
-Davide Migliavacca <davide.migliavacca@contactlab.com>
+Davide Migliavacca <shari@cpan.org>
 
 =back
 
@@ -137,4 +167,8 @@ This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
+
+
+__END__
+sub {}
 
