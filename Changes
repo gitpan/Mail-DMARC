@@ -1,0 +1,4 @@
+
+
+ - Mail::DMARC::Policy is well defined and tested
+ - setting up package
