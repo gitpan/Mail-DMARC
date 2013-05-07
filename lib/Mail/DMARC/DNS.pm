@@ -1,6 +1,6 @@
 package Mail::DMARC::DNS;
 {
-  $Mail::DMARC::DNS::VERSION = '0.20130506';
+  $Mail::DMARC::DNS::VERSION = '0.20130507';
 }
 
 use strict;
@@ -9,6 +9,7 @@ use warnings;
 use Carp;
 use IO::File;
 use Net::DNS::Resolver;
+use Net::IP;
 use Regexp::Common qw /net/;
 
 sub new {
@@ -78,14 +79,17 @@ sub get_resolver {
 sub is_valid_ip {
     my ($self, $ip) = @_;
 
-# If Regexp::Common proves problematic, Net::IP is a GREAT way to validate IPs
+# Using Regexp::Common removes perl 5.8 compat
+# Perl 5.008009 does not support the pattern $RE{net}{IPv6}.
+# You need Perl 5.01 or later at lib/Mail/DMARC/DNS.pm line 83.
+
     if ( $ip =~ /:/ ) {
-        return 1 if $ip =~ /^$RE{net}{IPv6}$/x;
-        return 0;
+        Net::IP->new( $ip, 6 ) or return 0;
+        return 1;
     };
 
-    return 1 if $ip =~ /^$RE{net}{IPv4}$/x;
-    return 0;
+    Net::IP->new( $ip, 4 ) or return 0;
+    return 1;
 };
 
 sub is_valid_domain {
@@ -111,7 +115,7 @@ Mail::DMARC::DNS - DNS functions for DMARC
 
 =head1 VERSION
 
-version 0.20130506
+version 0.20130507
 
 =head1 METHODS
 

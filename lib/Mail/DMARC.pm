@@ -1,6 +1,6 @@
 package Mail::DMARC;
 {
-  $Mail::DMARC::VERSION = '0.20130506';
+  $Mail::DMARC::VERSION = '0.20130507';
 }
 use strict;
 use warnings;
@@ -65,6 +65,13 @@ sub dkim {
     if ( 'ARRAY' ne ref $dkim ) {
         croak "dkim must be an array reference!";
     };
+    foreach my $s ( @$dkim ) {
+        foreach my $f ( qw/ domain result / ) {
+            if ( ! $s->{$f} ) {
+                croak "DKIM '$f' is required!";
+            };
+        };
+    };
     return $self->{dkim} = $dkim;
 };
 
@@ -78,9 +85,7 @@ sub spf {
 
     croak "invalid arguments" if @args % 2 != 0;
     $self->{spf} = { @args };
-    if ( $self->{spf}{result} eq 'pass' && ! $self->{spf}{result} ) {
-        croak "SPF pass MUST include the RFC5321.MailFrom domain!";
-    };
+    $self->is_valid_spf();
     return $self->{spf};
 };
 
@@ -90,6 +95,7 @@ sub inputs {
         backend       => 'perl', # perl or libopendmarc
         report_domain => 'great.co',
         report_org    => 'My Great Company',
+        local_policy  => ''     # with reason + comment?
     }
 };
 
@@ -120,6 +126,22 @@ sub is_valid_domain {
     return $self->{dns}->is_valid_domain($domain);
 };
 
+sub is_valid_spf {
+    my $self = shift;
+    foreach my $f ( qw/ domain result scope / ) {
+        if ( ! $self->{spf}{$f} ) {
+            croak "SPF $f is required!";
+        };
+    };
+    if ( ! grep {$_ eq lc $self->{spf}{scope}} qw/ mfrom helo / ) {
+        croak "invalid SPF scope!";
+    };
+    if ( $self->{spf}{result} eq 'pass' && ! $self->{spf}{domain} ) {
+        croak "SPF pass MUST include the RFC5321.MailFrom domain!";
+    };
+    return 1;
+};
+
 sub validate {
     my $self = shift;
     return $self->{pp} if ref $self->{pp};
@@ -139,7 +161,7 @@ Mail::DMARC - Perl implementation of DMARC
 
 =head1 VERSION
 
-version 0.20130506
+version 0.20130507
 
 =head1 SYNOPSIS
 

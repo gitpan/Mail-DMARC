@@ -1,6 +1,6 @@
 package Mail::DMARC::URI;
 {
-  $Mail::DMARC::URI::VERSION = '0.20130506';
+  $Mail::DMARC::URI::VERSION = '0.20130507';
 }
 use strict;
 use warnings;
@@ -26,7 +26,8 @@ sub parse {
             push @valids, { max_bytes => $bytes, uri => $uri };
             next;
         };
-        croak "invalid URI: $u";
+# 12.1 Discovery - URI schemes found in "rua" tag that are not implemented by
+#                  a Mail Receiver MUST be ignored.
     };
     return \@valids;
 };
@@ -58,7 +59,7 @@ Mail::DMARC::URI - a DMARC reporting URI
 
 =head1 VERSION
 
-version 0.20130506
+version 0.20130507
 
 =head1 DESCRIPTION
 

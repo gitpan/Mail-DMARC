@@ -19,9 +19,10 @@ requires:
   Carp: 0
   IO::File: 0
   Net::DNS::Resolver: 0
+  Net::IP: 0
   Regexp::Common: 2013031301
   URI: 0
   parent: 0
   strict: 0
   warnings: 0
-version: 0.20130506
+version: 0.20130507

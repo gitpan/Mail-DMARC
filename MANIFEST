@@ -7,6 +7,7 @@ META.yml
 Makefile.PL
 README
 README.md
+bin/dmarc_lookup
 dist.ini
 lib/Mail/DMARC.pm
 lib/Mail/DMARC/DNS.pm
@@ -19,6 +20,7 @@ lib/Mail/DMARC/Result.pm
 lib/Mail/DMARC/Result/Evaluated.pm
 lib/Mail/DMARC/URI.pm
 share/public_suffix_list
+sql/mail_dmarc.mysql
 t/00.Dmarc.t
 t/01.Policy.t
 t/02.DNS.t

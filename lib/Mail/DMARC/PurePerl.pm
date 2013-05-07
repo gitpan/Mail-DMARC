@@ -1,6 +1,6 @@
 package Mail::DMARC::PurePerl;
 {
-  $Mail::DMARC::PurePerl::VERSION = '0.20130506';
+  $Mail::DMARC::PurePerl::VERSION = '0.20130507';
 }
 use strict;
 use warnings;
@@ -25,13 +25,14 @@ sub init {
 
 sub validate {
     my $self = shift;
+    my $policy = shift;
 
-    my $from_dom = $self->get_from_dom()   # 11.1.  Extract Author Domain
+    my $from_dom = $self->get_from_dom()   # 11.2.1 Extract RFC5322.From domain
         or return;
     $self->exists_in_dns()         # 9.6. Receivers should reject email if
         or return;                 #      the domain appears to not exist
-    my $policy = $self->discover_policy() # 11.2.  Determine Handling Policy
-        or return;
+    $policy ||= $self->discover_policy();# 11.2.2 Query DNS for DMARC policy
+    $policy or return;
 
 #   3.5 Out of Scope  DMARC has no "short-circuit" provision, such as
 #         specifying that a pass from one authentication test allows one
@@ -50,6 +51,7 @@ sub validate {
     #        disposed of in accordance with the discovered DMARC policy of the
     #        Domain Owner.  See Section 6.2 for details.
     if ( lc $effective_p eq 'none' ) {
+        $self->result->evaluated->disposition('none');
         return;
     };
 
@@ -92,7 +94,8 @@ sub discover_policy {
     my $e = $self->result->evaluated;
 
     # 9.1  Mail Receivers MUST query the DNS for a DMARC TXT record
-    my $matches = $self->fetch_dmarc_record($from_dom, $org_dom) or return;
+    my $matches = $self->fetch_dmarc_record($from_dom, $org_dom);
+    return if 0 == scalar @$matches;
 
     # 9.5. If the remaining set contains multiple records, processing
     #      terminates and the Mail Receiver takes no action.
@@ -164,7 +167,7 @@ sub is_dkim_aligned {
     my $from_org  = $self->get_organizational_domain();
 
 # Required in report: DKIM-Domain, DKIM-Identity, DKIM-Selector
-    foreach my $dkim_ref ( $self->get_dkim_aligned_sigs() ) {
+    foreach my $dkim_ref ( $self->get_dkim_pass_sigs() ) {
         my $dkim_dom = $dkim_ref->{domain};
         my $dkmeta = {
             domain   => $dkim_ref->{domain},
@@ -177,6 +180,7 @@ sub is_dkim_aligned {
 
         if ($dkim_dom eq $from_dom) { # strict alignment requires exact match
             $self->result->evaluated->dkim('pass');
+            $self->result->evaluated->dkim_align('strict');
             $self->result->evaluated->dkim_meta( $dkmeta );
             last;
         }
@@ -191,6 +195,7 @@ sub is_dkim_aligned {
         my $dkim_org = $self->get_organizational_domain($dkim_dom);
         if ( $dkim_org eq $from_org ) {
             $self->result->evaluated->dkim('pass');
+            $self->result->evaluated->dkim_align('relaxed');
             $self->result->evaluated->dkim_meta( $dkmeta );
         };
     };
@@ -251,7 +256,7 @@ sub has_valid_reporting_uri {
     return 0;
 }
 
-sub get_dkim_aligned_sigs {
+sub get_dkim_pass_sigs {
     my $self = shift;
 
     my $dkim_sigs = $self->dkim or croak "missing dkim!";
@@ -259,12 +264,7 @@ sub get_dkim_aligned_sigs {
         croak "dkim needs to be an array reference!";
     };
 
-    my @dkim_pass_doms = grep {
-               $_->{result} eq 'pass'
-            && $_->{domain} eq $self->header_from,
-    } @$dkim_sigs;
-
-    return @dkim_pass_doms;
+    return grep { $_->{result} eq 'pass' } @$dkim_sigs;
 };
 
 sub get_organizational_domain {
@@ -437,7 +437,7 @@ Mail::DMARC::PurePerl - a perl implementation of DMARC
 
 =head1 VERSION
 
-version 0.20130506
+version 0.20130507
 
 =head1 METHODS
 
@@ -468,14 +468,32 @@ Determine if a domain exists, reliably. The DMARC draft says:
   9.6 If the RFC5322.From domain does not exist in the DNS, Mail Receivers
       SHOULD direct the receiving SMTP server to reject the message {R9}.
 
-I went back to the DKIM ADSP (which led me to the ietf-dkim email list where
+And in Appendix A.4:
+
+   A common practice among MTA operators, and indeed one documented in
+   [ADSP], is a test to determine domain existence prior to any more
+   expensive processing.  This is typically done by querying the DNS for
+   MX, A or AAAA resource records for the name being evaluated, and
+   assuming the domain is non-existent if it could be determined that no
+   such records were published for that domain name.
+
+   The original pre-standardization version of this protocol included a
+   mandatory check of this nature.  It was ultimately removed, as the
+   method's error rate was too high without substantial manual tuning
+   and heuristic work.  There are indeed use cases this work needs to
+   address where such a method would return a negative result about a
+   domain for which reporting is desired, such as a registered domain
+   name that never sends legitimate mail and thus has none of these
+   records present in the DNS.
+
+I went back to the ADSP (which led me to the ietf-dkim email list where
 some 'experts' failed to agree on The Right Way to test domain validity. They
 pointed out: MX records aren't mandatory, and A or AAAA aren't reliable.
 
-Some experimentation proved both arguments in real world usage. I test for
-existence by searching for a MX, NS, A, or AAAA record. Since this search
-may be repeated for the Organizational Name, if the NS query fails, there's
-no delegation from the TLD. That has proven very reliable.
+Some experimentation proved both arguments in real world usage. This module
+tests for existence by searching for a MX, NS, A, or AAAA record. Since this
+search may be repeated for the Organizational Name, if the NS query fails,
+there is no delegation from the TLD. That has proven very reliable.
 
 =head2 fetch_dmarc_record
 

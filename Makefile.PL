@@ -23,6 +23,7 @@ my %WriteMakefileArgs = (
     "Carp" => 0,
     "IO::File" => 0,
     "Net::DNS::Resolver" => 0,
+    "Net::IP" => 0,
     "Regexp::Common" => "2013031301",
     "URI" => 0,
     "parent" => 0,
@@ -33,7 +34,7 @@ my %WriteMakefileArgs = (
     "Data::Dumper" => 0,
     "Test::More" => 0
   },
-  "VERSION" => "0.20130506",
+  "VERSION" => "0.20130507",
   "test" => {
     "TESTS" => "t/*.t"
   }
