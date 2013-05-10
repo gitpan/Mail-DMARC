@@ -1,6 +1,6 @@
 package Mail::DMARC::PurePerl;
 {
-  $Mail::DMARC::PurePerl::VERSION = '0.20130507';
+  $Mail::DMARC::PurePerl::VERSION = '0.20130510';
 }
 use strict;
 use warnings;
@@ -9,17 +9,12 @@ use Carp;
 
 use parent 'Mail::DMARC';
 
-sub dns {
-    my $self = shift;
-    $self->{dns} ||= Mail::DMARC::DNS->new();
-    return $self->{dns};
-};
-
 sub init {
     my $self = shift;
-    $self->{is_subdomain} = undef;
+    $self->is_subdomain(0);
     $self->{policy} = undef;
     $self->{result} = undef;
+    $self->{report} = undef;
     return;
 };
 
@@ -67,7 +62,7 @@ sub validate {
 # subjected to whatever policy is selected by the "p" or "sp" tag
     if ( int(rand(100)) >= $policy->pct ) {
         $self->result->evaluated->disposition('none');
-        $self->result->evaluated->reason( {type=>'sampled_out'} );
+        $self->result->evaluated->reason( type=>'sampled_out' );
         return;
     };
 
@@ -102,7 +97,7 @@ sub discover_policy {
     if (scalar @$matches > 1) {
         $e->result('fail');
         $e->disposition('none');
-        $e->reason({type=>'other', comment=> "too many DMARC records" });
+        $e->reason(type=>'other', comment=> "too many DMARC records" );
         return;
     }
 
@@ -124,7 +119,7 @@ sub discover_policy {
         if (!$policy->rua || !$self->has_valid_reporting_uri($policy->rua)) {
             $e->result('fail');
             $e->disposition('none');
-            $e->reason( { type=>'other', comment=> "no valid reporting rua" });
+            $e->reason( type=>'other', comment=> "no valid reporting rua" );
             return;
         }
         $policy->v( 'DMARC1' );
@@ -149,6 +144,7 @@ sub is_aligned {
     if (    'pass' eq $self->result->evaluated->spf
          || 'pass' eq $self->result->evaluated->dkim ) {
         $self->result->evaluated->result('pass');
+        $self->result->evaluated->disposition('none');
         return 1;
     };
     $self->result->evaluated->result('fail');
@@ -169,14 +165,15 @@ sub is_dkim_aligned {
 # Required in report: DKIM-Domain, DKIM-Identity, DKIM-Selector
     foreach my $dkim_ref ( $self->get_dkim_pass_sigs() ) {
         my $dkim_dom = $dkim_ref->{domain};
+
+        # 4.3.1 make sure $dkim_dom is not a public suffix
+        next if $self->dns->is_public_suffix($dkim_dom);
+
         my $dkmeta = {
             domain   => $dkim_ref->{domain},
             selector => $dkim_ref->{selector},
             identity => '',  # TODO, what is this?
         };
-
-        # 4.3.1 make sure $dkim_dom is not a public suffix
-        next if $self->dns->is_public_suffix($dkim_dom);
 
         if ($dkim_dom eq $from_dom) { # strict alignment requires exact match
             $self->result->evaluated->dkim('pass');
@@ -242,12 +239,6 @@ sub is_spf_aligned {
     }
     $self->result->evaluated->spf('fail');
     return 0;
-};
-
-sub is_subdomain {
-    return $_[0]->{is_subdomain} if 1 == scalar @_;
-    croak "invalid boolean" if 0 == grep {/^$_[1]$/ix} qw/ 0 1/;
-    return $_[0]->{is_subdomain} = $_[1];
 };
 
 sub has_valid_reporting_uri {
@@ -329,7 +320,7 @@ sub exists_in_dns {
         $self->result->evaluated->result('fail');
         $self->result->evaluated->disposition('reject');
         $self->result->evaluated->reason(
-                {type=>'other', comment => "$from_dom not in DNS"});
+                type=>'other', comment => "$from_dom not in DNS");
     };
     return $matched;
 }
@@ -366,7 +357,7 @@ sub fetch_dmarc_record {
  
     $self->result->evaluated->result('fail');
     $self->result->evaluated->disposition('none');
-    $self->result->evaluated->reason({ type=>'other',comment=>'no DMARC record found'});
+    $self->result->evaluated->reason( type=>'other',comment=>'no DMARC record found');
     return \@matches;
 }
 
@@ -386,7 +377,7 @@ sub get_dom_from_header {
     my $header = $self->header_from_raw or do {
         $e->result('fail');
         $e->disposition('none');
-        $e->reason( {type=>'other', comment => "no header_from"});
+        $e->reason( type=>'other', comment => "no header_from");
         return;
     };
 
@@ -407,7 +398,7 @@ sub get_dom_from_header {
     if ( ! $from_dom ) {
         $e->result('fail');
         $e->disposition('none');
-        $e->reason( {type=>'other', comment => "invalid header_from domain"});
+        $e->reason( type=>'other', comment => "invalid header_from domain");
         return;
     };
     return $self->header_from($from_dom);
@@ -437,7 +428,7 @@ Mail::DMARC::PurePerl - a perl implementation of DMARC
 
 =head1 VERSION
 
-version 0.20130507
+version 0.20130510
 
 =head1 METHODS
 
@@ -454,8 +445,6 @@ Resets the Mail::DMARC object, preparing it for a fresh request.
 =head2 is_dkim_aligned
 
 =head2 is_spf_aligned
-
-=head2 is_subdomain
 
 =head2 has_valid_reporting_uri
 

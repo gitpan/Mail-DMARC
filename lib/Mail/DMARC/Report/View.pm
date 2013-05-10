@@ -1,33 +1,32 @@
-package Mail::DMARC::Report::IODEF;
+package Mail::DMARC::Report::View;
 {
-  $Mail::DMARC::Report::IODEF::VERSION = '0.20130510';
+  $Mail::DMARC::Report::View::VERSION = '0.20130510';
 }
 use strict;
 use warnings;
 
-use parent 'Mail::DMARC::Report';
+use Carp;
+
+use parent 'Mail::DMARC::Base';
+
 
 1;
-# ABSTRACT: an IODEF report
+# ABSTRACT: view DMARC report(s)
 
 
 =pod
 
 =head1 NAME
 
-Mail::DMARC::Report::IODEF - an IODEF report
+Mail::DMARC::Report::View - view DMARC report(s)
 
 =head1 VERSION
 
 version 0.20130510
 
-=head1 WHY IS THIS EMPTY?
+=head1 DESCRIPTION
 
-https://datatracker.ietf.org/doc/draft-kucherawy-dmarc-base/?include_text=1
-
-Section 3.5 Out of Scope:
-
-    This first version of DMARC supports only a single reporting format.
+View DMARC reports
 
 =head1 AUTHORS
 
@@ -54,4 +53,5 @@ the same terms as the Perl 5 programming language system itself.
 
 
 __END__
+sub {}
 

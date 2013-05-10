@@ -1,13 +1,13 @@
 package Mail::DMARC::Policy;
 {
-  $Mail::DMARC::Policy::VERSION = '0.20130507';
+  $Mail::DMARC::Policy::VERSION = '0.20130510';
 }
 use strict;
 use warnings;
 
 use Carp;
 
-use Mail::DMARC::URI;
+use Mail::DMARC::Report::URI;
 
 sub new {
     my ($class, @args) = @_;
@@ -130,7 +130,7 @@ sub is_valid_p {
 
 sub is_valid_uri_list {
     my ($self, $str) = @_;
-    $self->{uri} ||= Mail::DMARC::URI->new;
+    $self->{uri} ||= Mail::DMARC::Report::URI->new;
     my $uris = $self->{uri}->parse( $str );
     return scalar @$uris;
 };
@@ -158,7 +158,7 @@ Mail::DMARC::Policy - a DMARC policy in object format
 
 =head1 VERSION
 
-version 0.20130507
+version 0.20130510
 
 =head1 EXAMPLES
 

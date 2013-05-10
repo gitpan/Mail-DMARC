@@ -1,6 +1,6 @@
 package Mail::DMARC::Result::Evaluated;
 {
-  $Mail::DMARC::Result::Evaluated::VERSION = '0.20130507';
+  $Mail::DMARC::Result::Evaluated::VERSION = '0.20130510';
 }
 use strict;
 use warnings;
@@ -52,19 +52,53 @@ sub spf_align {
     return $_[0]->{spf_align} = $_[1];
 };
 
-sub reason {
-    return $_[0]->{reason} if 1 == scalar @_;
-    croak "invalid reason" if 0 == grep {$_[1]->{type} eq $_} 
-        qw/ forwarded sampled_out trusted_forwarder
-            mailing_list local_policy other /;
-    # comment is optional and requires no validation
-    return $_[0]->{reason} = $_[1];
-};
-
 sub result {
     return $_[0]->{result} if 1 == scalar @_;
     croak "invalid result" if 0 == grep {/^$_[1]$/ix} qw/ pass fail /;
     return $_[0]->{result} = $_[1];
+};
+
+sub reason {
+    my $self = shift;
+    my @args = @_;
+    return $self->{reason} if ref $self->{reason} && ! scalar @args;
+    return $self->{reason} = Mail::DMARC::Result::Evaluated::Reason->new(@args);
+};
+
+1;
+
+package Mail::DMARC::Result::Evaluated::Reason;
+{
+  $Mail::DMARC::Result::Evaluated::Reason::VERSION = '0.20130510';
+}  ## no critic (MultiplePackages)
+use strict;
+use warnings;
+
+use Carp;
+
+sub new {
+    my ($class, @args) = @_;
+    croak "invalid arguments" if @args % 2 != 0;
+    my $self = bless {}, $class;
+    my %args = @args;
+    foreach my $key ( keys %args) {
+        $self->$key( $args{$key} );
+    };
+    return $self;
+}
+
+sub type {
+    return $_[0]->{type} if 1 == scalar @_;
+    croak "invalid type" if 0 == grep {/^$_[1]$/ix}
+        qw/ forwarded sampled_out trusted_forwarder
+            mailing_list local_policy other /;
+    return $_[0]->{type} = $_[1];
+};
+
+sub comment {
+    return $_[0]->{comment} if 1 == scalar @_;
+    # comment is optional and requires no validation
+    return $_[0]->{comment} = $_[1];
 };
 
 1;
@@ -79,7 +113,7 @@ Mail::DMARC::Result::Evaluated - the results of applying a DMARC policy
 
 =head1 VERSION
 
-version 0.20130507
+version 0.20130510
 
 =head1 OVERVIEW
 
@@ -132,12 +166,16 @@ If the message passed the SPF alignment test, this indicates whether the alignme
 
 If the applied policy differs from the sites published policy, the evaluated policy should contain a reason and optionally a comment. 
 
+An evaluated DMARC result reason has two attributes, type, and comment.
+
     reason => {   
         type =>  '',   
         comment => '',
     },
 
-The following reason types are defined: 
+=head3 type
+
+The following reason types are defined and valid:
 
     forwarded
     sampled_out
@@ -145,6 +183,10 @@ The following reason types are defined:
     mailing_list
     local_policy
     other
+
+=head3 comment
+
+Comment is a free form text field.
 
 =head1 AUTHORS
 
@@ -172,4 +214,5 @@ the same terms as the Perl 5 programming language system itself.
 
 __END__
 sub {}
+
 

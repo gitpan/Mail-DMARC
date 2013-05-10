@@ -1,33 +1,38 @@
-package Mail::DMARC::Report::IODEF;
+package Mail::DMARC::Report::Receive;
 {
-  $Mail::DMARC::Report::IODEF::VERSION = '0.20130510';
+  $Mail::DMARC::Report::Receive::VERSION = '0.20130510';
 }
 use strict;
 use warnings;
 
-use parent 'Mail::DMARC::Report';
+use Carp;
+
+use parent 'Mail::DMARC::Base';
+
 
 1;
-# ABSTRACT: an IODEF report
+# ABSTRACT: receive a DMARC report
 
 
 =pod
 
 =head1 NAME
 
-Mail::DMARC::Report::IODEF - an IODEF report
+Mail::DMARC::Report::Receive - receive a DMARC report
 
 =head1 VERSION
 
 version 0.20130510
 
-=head1 WHY IS THIS EMPTY?
+=head1 DESCRIPTION
 
-https://datatracker.ietf.org/doc/draft-kucherawy-dmarc-base/?include_text=1
+Receive DMARC reports, via SMTP or HTTP.
 
-Section 3.5 Out of Scope:
+=head1 Report Receiver
 
-    This first version of DMARC supports only a single reporting format.
+=head2 HTTP
+
+=head2 SMTP
 
 =head1 AUTHORS
 
@@ -54,4 +59,5 @@ the same terms as the Perl 5 programming language system itself.
 
 
 __END__
+sub {}
 

@@ -1,13 +1,17 @@
 package Mail::DMARC;
 {
-  $Mail::DMARC::VERSION = '0.20130507';
+  $Mail::DMARC::VERSION = '0.20130510';
 }
 use strict;
 use warnings;
 
 use Carp;
 
-use Mail::DMARC::DNS;
+require Mail::DMARC::DNS;
+require Mail::DMARC::Policy;
+require Mail::DMARC::PurePerl;
+require Mail::DMARC::Report;
+require Mail::DMARC::Result;
 
 sub new {
     my ($class, @args) = @_;
@@ -17,25 +21,25 @@ sub new {
 
 sub source_ip {
     return $_[0]->{source_ip} if 1 == scalar @_;
-    croak "invalid source_ip" if ! $_[0]->is_valid_ip($_[1]);
+    croak "invalid source_ip" if ! $_[0]->dns->is_valid_ip($_[1]);
     return $_[0]->{source_ip} = $_[1];
 };
 
 sub envelope_to {
     return $_[0]->{envelope_to} if 1 == scalar @_;
-    croak "invalid envelope_to" if ! $_[0]->is_valid_domain($_[1]);
+    croak "invalid envelope_to" if ! $_[0]->dns->is_valid_domain($_[1]);
     return $_[0]->{envelope_to} = $_[1];
 };
 
 sub envelope_from {
     return $_[0]->{envelope_from} if 1 == scalar @_;
-    croak "invalid envelope_from" if ! $_[0]->is_valid_domain($_[1]);
+    croak "invalid envelope_from" if ! $_[0]->dns->is_valid_domain($_[1]);
     return $_[0]->{envelope_from} = $_[1];
 };
 
 sub header_from {
     return $_[0]->{header_from} if 1 == scalar @_;
-    croak "invalid header_from" if ! $_[0]->is_valid_domain($_[1]);
+    croak "invalid header_from" if ! $_[0]->dns->is_valid_domain($_[1]);
     return $_[0]->{header_from} = $_[1];
 };
 
@@ -43,6 +47,12 @@ sub header_from_raw {
     return $_[0]->{header_from_raw} if 1 == scalar @_;
 #croak "invalid header_from_raw: $_[1]" if 'from:' ne lc substr($_[1], 0, 5);
     return $_[0]->{header_from_raw} = $_[1];
+};
+
+sub local_policy {
+    return $_[0]->{local_policy} if 1 == scalar @_;
+# TODO: document this, when and why it would be used
+    return $_[0]->{local_policy} = $_[1];
 };
 
 sub dkim {
@@ -89,41 +99,34 @@ sub spf {
     return $self->{spf};
 };
 
-sub inputs {
+sub dns {
     my $self = shift;
-    return {
-        backend       => 'perl', # perl or libopendmarc
-        report_domain => 'great.co',
-        report_org    => 'My Great Company',
-        local_policy  => ''     # with reason + comment?
-    }
+    return $self->{dns} if ref $self->{dns};
+    return $self->{dns} = Mail::DMARC::DNS->new();
 };
 
 sub policy {
     my ($self, @args) = @_;
-    return $self->{policy} if scalar @args == 0 && ref $self->{policy};
-    require Mail::DMARC::Policy;
+    return $self->{policy} if ref $self->{policy} && 0 == scalar @args;
     return $self->{policy} = Mail::DMARC::Policy->new(@args);
+};
+
+sub report {
+    my $self = shift;
+    return $self->{report} if ref $self->{report};
+    return $self->{report} = Mail::DMARC::Report->new( $self );
 };
 
 sub result {
     my $self = shift;
     return $self->{result} if ref $self->{result};
-    require Mail::DMARC::Result;
-    $self->{result} = Mail::DMARC::Result->new();
-    return $self->{result};
+    return $self->{result} = Mail::DMARC::Result->new();
 };
 
-sub is_valid_ip {
-    my ($self, $ip) = @_;
-    $self->{dns} ||= Mail::DNS::DNS->new();
-    return $self->{dns}->is_valid_ip($ip);
-};
-
-sub is_valid_domain {
-    my ($self, $domain) = @_;
-    $self->{dns} ||= Mail::DMARC::DNS->new();
-    return $self->{dns}->is_valid_domain($domain);
+sub is_subdomain {
+    return $_[0]->{is_subdomain} if 1 == scalar @_;
+    croak "invalid boolean" if 0 == grep {/^$_[1]$/ix} qw/ 0 1/;
+    return $_[0]->{is_subdomain} = $_[1];
 };
 
 sub is_valid_spf {
@@ -142,13 +145,6 @@ sub is_valid_spf {
     return 1;
 };
 
-sub validate {
-    my $self = shift;
-    return $self->{pp} if ref $self->{pp};
-    require Mail::DMARC::PurePerl;
-    return $self->{pp} = Mail::DMARC::PurePerl->new();
-};
-
 1;
 # ABSTRACT: Perl implementation of DMARC
 
@@ -161,7 +157,7 @@ Mail::DMARC - Perl implementation of DMARC
 
 =head1 VERSION
 
-version 0.20130507
+version 0.20130510
 
 =head1 SYNOPSIS
 
@@ -177,6 +173,8 @@ Determine if:
     b. the header_from domain publishes a DMARC policy
     c. does the message conform to the published policy?
 
+Results of DMARC processing are stored in a L<Mail::DMARC::Result> object.
+
 =head1 CLASSES
 
 L<Mail::DMARC> - A perl implementation of the DMARC draft
@@ -187,17 +185,7 @@ L<Mail::DMARC::Policy> - a DMARC record in object format
 
 L<Mail::DMARC::PurePerl> - a DMARC implementation
 
-=over 4
-
-=item L<Mail::DMARC::Report>
-
-=item L<Mail::DMARC::Report::AFRF>
-
-=item L<Mail::DMARC::Report::IODEF>
-
-=back
-
-L<Mail::DMARC::URI> - a DMARC reporting URI
+L<Mail::DMARC::Report>
 
 =over 4
 
@@ -208,6 +196,30 @@ L<Mail::DMARC::URI> - a DMARC reporting URI
 =back
 
 L<Mail::DMARC::libopendmarc|http://search.cpan.org/~shari/Mail-DMARC-opendmarc> - an XS implementation using libopendmarc
+
+=head1 HOW TO USE
+
+    my $dmarc = Mail::DMARC->new( "see L<new|#new> for required args");
+    my $result = $dmarc->verify();
+
+    if ( $result->evaluated->result eq 'pass' ) {
+        ...continue normal processing...
+        return;
+    };
+
+    # any result that did not pass is a fail. Now for disposition
+
+    if ( $result->evalated->disposition eq 'reject' ) {
+        ...treat the sender to a 550 ...
+    };
+    if ( $result->evalated->disposition eq 'quarantine' ) {
+        ...assign a bunch of spam points...
+    };
+    if ( $result->evalated->disposition eq 'none' ) {
+        ...continue normal processing...
+    };
+
+There's a lot more information available in the $result object. See the L<Mail::DMARC::Result> page for complete details.
 
 =head1 METHODS
 
@@ -235,8 +247,8 @@ Alternatively, you can pass in all the required parameters in one shot:
             envelope_to   => 'example.com',
             envelope_from => 'cars4you.info',
             header_from   => 'yahoo.com',
-            dkim          => $dkim_results,
-            spf           => $spf_results,
+            dkim          => $dkim_results,  # same format
+            spf           => $spf_results,   # as previous example
             );
     my $result = $dmarc->verify();
 

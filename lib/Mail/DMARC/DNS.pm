@@ -1,6 +1,6 @@
 package Mail::DMARC::DNS;
 {
-  $Mail::DMARC::DNS::VERSION = '0.20130507';
+  $Mail::DMARC::DNS::VERSION = '0.20130510';
 }
 
 use strict;
@@ -84,12 +84,10 @@ sub is_valid_ip {
 # You need Perl 5.01 or later at lib/Mail/DMARC/DNS.pm line 83.
 
     if ( $ip =~ /:/ ) {
-        Net::IP->new( $ip, 6 ) or return 0;
-        return 1;
+        return Net::IP->new( $ip, 6 );
     };
 
-    Net::IP->new( $ip, 4 ) or return 0;
-    return 1;
+    return Net::IP->new( $ip, 4 );
 };
 
 sub is_valid_domain {
@@ -115,7 +113,7 @@ Mail::DMARC::DNS - DNS functions for DMARC
 
 =head1 VERSION
 
-version 0.20130507
+version 0.20130510
 
 =head1 METHODS
 

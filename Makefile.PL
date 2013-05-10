@@ -21,7 +21,12 @@ my %WriteMakefileArgs = (
   "NAME" => "Mail::DMARC",
   "PREREQ_PM" => {
     "Carp" => 0,
+    "Config::Tiny" => 0,
+    "DBIx::Simple" => 0,
+    "Data::Dumper" => 0,
+    "English" => 0,
     "IO::File" => 0,
+    "MIME::Lite" => 0,
     "Net::DNS::Resolver" => 0,
     "Net::IP" => 0,
     "Regexp::Common" => "2013031301",
@@ -31,10 +36,9 @@ my %WriteMakefileArgs = (
     "warnings" => 0
   },
   "TEST_REQUIRES" => {
-    "Data::Dumper" => 0,
     "Test::More" => 0
   },
-  "VERSION" => "0.20130507",
+  "VERSION" => "0.20130510",
   "test" => {
     "TESTS" => "t/*.t"
   }

@@ -1,6 +1,6 @@
-package Mail::DMARC::URI;
+package Mail::DMARC::Report::URI;
 {
-  $Mail::DMARC::URI::VERSION = '0.20130507';
+  $Mail::DMARC::Report::URI::VERSION = '0.20130510';
 }
 use strict;
 use warnings;
@@ -8,7 +8,10 @@ use warnings;
 use Carp;
 use URI;
 
-use parent 'Mail::DMARC';
+sub new {
+    my $class = shift;
+    return bless {}, $class;
+};
 
 sub parse {
     my ($self, $str) = @_;
@@ -55,11 +58,11 @@ sub get_size_limit {
 
 =head1 NAME
 
-Mail::DMARC::URI - a DMARC reporting URI
+Mail::DMARC::Report::URI - a DMARC reporting URI
 
 =head1 VERSION
 
-version 0.20130507
+version 0.20130510
 
 =head1 DESCRIPTION
 
@@ -139,5 +142,4 @@ the same terms as the Perl 5 programming language system itself.
 
 __END__
 sub {}
-
 

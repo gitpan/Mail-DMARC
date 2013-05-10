@@ -1,14 +1,18 @@
 package Mail::DMARC::Result;
 {
-  $Mail::DMARC::Result::VERSION = '0.20130507';
+  $Mail::DMARC::Result::VERSION = '0.20130510';
 }
 use strict;
 use warnings;
 
 use Carp;
 
-use parent 'Mail::DMARC';
 use Mail::DMARC::Result::Evaluated;
+
+sub new {
+    my $class = shift;
+    return bless { }, $class;
+}
 
 sub published {
     my ($self, $policy) = @_;
@@ -42,7 +46,7 @@ Mail::DMARC::Result - DMARC processing results
 
 =head1 VERSION
 
-version 0.20130507
+version 0.20130510
 
 =head1 METHDS
 
@@ -52,7 +56,7 @@ Published is a L<Mail::DMARC::Policy> object with one extra attribute: domain. T
 
 =head2 evaluated
 
-The B<evaluated> method is L<Mail::DMARC::Result::Evaluated> object. See the man page for that method for details.
+The B<evaluated> method is L<Mail::DMARC::Result::Evaluated> object, containing all of the results from evaluating DMARC policy. See the L<evaluated man page|Mail::DMARC::Result::Evaluated> for details.
 
 =head1 AUTHORS
 
