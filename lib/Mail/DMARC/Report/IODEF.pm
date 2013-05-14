@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::IODEF;
 {
-  $Mail::DMARC::Report::IODEF::VERSION = '0.20130510';
+  $Mail::DMARC::Report::IODEF::VERSION = '0.20130514';
 }
 use strict;
 use warnings;
@@ -19,7 +19,7 @@ Mail::DMARC::Report::IODEF - an IODEF report
 
 =head1 VERSION
 
-version 0.20130510
+version 0.20130514
 
 =head1 WHY IS THIS EMPTY?
 

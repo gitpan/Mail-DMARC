@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Store::SQL;
 {
-  $Mail::DMARC::Report::Store::SQL::VERSION = '0.20130510';
+  $Mail::DMARC::Report::Store::SQL::VERSION = '0.20130514';
 }
 use strict;
 use warnings;
@@ -8,7 +8,6 @@ use warnings;
 use Carp;
 use Data::Dumper;
 use DBIx::Simple;
-use Net::IP;
 
 use parent 'Mail::DMARC::Base';
 
@@ -27,15 +26,50 @@ sub save {
     return $self->{report_row_id};
 };
 
-sub dmarc { return $_[0]->{dmarc}; };
-
 sub retrieve {
-    my $self = shift;
-    my $reports = $self->query( 'SELECT * FROM report' );
-#    my $last = $reports->[-1];
-#my $details = $self->query( 'SELECT * FROM report r' );
+    my ($self, %args) = @_;
+    my $query = 'SELECT * FROM report WHERE 1=1';
+    my @qparm;
+    if ( $args{end} ) {
+        $query .= " AND end < ?";
+        push @qparm, $args{end};
+#       print "query: $query ($args{end})\n";
+    };
+    my $reports = $self->query( $query, [ @qparm ] );
+    foreach my $r ( @$reports ) {
+        $r->{policy_published} = $self->query( 'SELECT * from report_policy_published WHERE report_id=?', [ $r->{id} ] )->[0];
+        my $rows = $r->{rows} = $self->query( 'SELECT * from report_record WHERE report_id=?', [ $r->{id} ] );
+        foreach my $row ( @$rows ) {
+            $row->{source_ip} = $self->inet_ntop( $row->{source_ip} );
+            $row->{reason} = $self->query( 'SELECT type,comment from report_record_disp_reason WHERE report_record_id=?', [ $row->{id} ]);
+            $row->{auth_results}{spf} = $self->query( 'SELECT domain,result,scope from report_record_spf WHERE report_record_id=?', [ $row->{id} ] );
+            $row->{auth_results}{dkim} = $self->query( 'SELECT domain,selector,result,human_result from report_record_dkim WHERE report_record_id=?', [ $row->{id} ] );
+        };
+    };
     return $reports;
 };
+
+sub delete_report {
+    my $self = shift;
+    my $report_id = shift or carp "missing report ID";
+    print "deleting report $report_id\n";
+
+    # deletes with FK don't cascade in SQLite? Clean each table manually
+    my $rows = $self->query( 'SELECT id FROM report_record WHERE report_id=?', [ $report_id ] );
+    my $row_ids = join(',', map { $_->{id} } @$rows) or return 1;
+    foreach my $table ( qw/ report_record_spf report_record_dkim report_record_disp_reason / ) {
+        print "deleting $table rows $row_ids\n";
+        $self->query("DELETE FROM $table WHERE report_record_id IN ($row_ids)");
+    };
+    foreach my $table ( qw/ report_policy_published report_record / ) {
+        $self->query("DELETE FROM $table WHERE report_id=?", [ $report_id ] );
+    };
+# In MySQL, where FK constraints DO cascade, this is the only query needed
+    $self->query("DELETE FROM report WHERE id=?", [ $report_id ] );
+    return 1;
+};
+
+sub dmarc { return $_[0]->{dmarc}; };
 
 sub insert_rr_reason {
     my $self = shift;
@@ -95,7 +129,7 @@ EO_ROW_INSERT
 ;
     my $args = [
         $self->{report_id},
-        Net::IP->new($self->dmarc->source_ip)->intip,
+        $self->inet_pton($self->dmarc->source_ip),
         $eva->disposition,
         $eva->dkim,
         $eva->spf,
@@ -139,9 +173,9 @@ sub insert_report {
 
 sub insert_report_published_policy {
     my $self = shift;
-    my $pub = $self->dmarc->result->published;
-    $pub->apply_defaults;
-    my $query = 'INSERT INTO report_policy_published (report_id, adkim, aspf, p, sp, pct) VALUES (?,?,?,?,?,?)';
+    my $pub = $self->dmarc->result->published or croak "unable to get published policy";
+    $pub->apply_defaults or croak "failed to apply defaults?!";
+    my $query = 'INSERT INTO report_policy_published (report_id, adkim, aspf, p, sp, pct, rua) VALUES (?,?,?,?,?,?,?)';
     return $self->query( $query, [
             $self->{report_id},
             $pub->adkim,
@@ -149,12 +183,13 @@ sub insert_report_published_policy {
             $pub->p,
             $pub->sp,
             $pub->pct,
+            $pub->rua,
             ]
             ) or croak "failed to insert published policy";
 };
 
 sub db_connect {
-    my ($self, $config) = @_;
+    my $self = shift;
 
     return $self->{dbh} if $self->{dbh};   # caching
 
@@ -220,7 +255,7 @@ sub query_insert {
     my ($self, $query, $err, @params) = @_;
     my $dbix = $self->{dbh};
     my (undef,undef,$table) = split /\s+/, $query;
-    ($table) = split( /\(/, $table) if $table =~ /\(/; 
+    ($table) = split( /\(/, $table) if $table =~ /\(/;
     eval { $dbix->query( $query, @params ); } or do {
         carp $dbix->error if $dbix->error ne 'DBI error: ';
     };
@@ -277,7 +312,7 @@ Mail::DMARC::Report::Store::SQL - Store DMARC reports
 
 =head1 VERSION
 
-version 0.20130510
+version 0.20130514
 
 =head1 DESCRIPTION
 

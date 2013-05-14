@@ -24,12 +24,17 @@ my %WriteMakefileArgs = (
     "Config::Tiny" => 0,
     "DBIx::Simple" => 0,
     "Data::Dumper" => 0,
+    "Email::MIME" => 0,
     "English" => 0,
+    "IO::Compress::Gzip" => 0,
     "IO::File" => 0,
-    "MIME::Lite" => 0,
     "Net::DNS::Resolver" => 0,
     "Net::IP" => 0,
+    "Net::SMTPS" => 0,
+    "POSIX" => 0,
     "Regexp::Common" => "2013031301",
+    "Socket" => 2,
+    "Sys::Hostname" => 0,
     "URI" => 0,
     "parent" => 0,
     "strict" => 0,
@@ -38,7 +43,7 @@ my %WriteMakefileArgs = (
   "TEST_REQUIRES" => {
     "Test::More" => 0
   },
-  "VERSION" => "0.20130510",
+  "VERSION" => "0.20130514",
   "test" => {
     "TESTS" => "t/*.t"
   }

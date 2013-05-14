@@ -1,12 +1,13 @@
 package Mail::DMARC::Base;
 {
-  $Mail::DMARC::Base::VERSION = '0.20130510';
+  $Mail::DMARC::Base::VERSION = '0.20130514';
 }
 use strict;
 use warnings;
 
 use Carp;
 use Config::Tiny;
+use Socket 2;
 
 sub new {
     my ($class, @args) = @_;
@@ -38,6 +39,28 @@ sub get_config {
     croak "unable to find config file $file\n";
 }
 
+sub inet_ntop {
+    my ($self, $ip_bin) = @_;
+    $ip_bin or croak "missing IP in request";
+
+    if ( length $ip_bin == 16 ) {
+        return Socket::inet_ntop( AF_INET6, $ip_bin );
+    };
+
+    return Socket::inet_ntop( AF_INET, $ip_bin );
+};
+
+sub inet_pton {
+    my ($self, $ip_txt) = @_;
+    $ip_txt or croak "missing IP in request";
+
+    if ( $ip_txt =~ /:/ ) {
+        return Socket::inet_pton( AF_INET6, $ip_txt ) or croak "invalid IPv6: $ip_txt";
+    };
+
+    return Socket::inet_pton( AF_INET, $ip_txt ) or croak "invalid IPv4: $ip_txt";
+};
+
 1;
 # ABSTRACT: utility functions
 
@@ -50,7 +73,7 @@ Mail::DMARC::Base - utility functions
 
 =head1 VERSION
 
-version 0.20130510
+version 0.20130514
 
 =head1 AUTHORS
 
@@ -77,5 +100,4 @@ the same terms as the Perl 5 programming language system itself.
 
 
 __END__
-
 

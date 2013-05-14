@@ -1,6 +1,6 @@
 package Mail::DMARC::DNS;
 {
-  $Mail::DMARC::DNS::VERSION = '0.20130510';
+  $Mail::DMARC::DNS::VERSION = '0.20130514';
 }
 
 use strict;
@@ -12,22 +12,14 @@ use Net::DNS::Resolver;
 use Net::IP;
 use Regexp::Common qw /net/;
 
-sub new {
-    my $class = shift;
-    return bless {
-        dns_timeout   => 5,
-        resolver      => undef,
-        ps_file       => 'share/public_suffix_list',
-    },
-    $class;
-}
+use parent 'Mail::DMARC::Base';
 
 sub is_public_suffix {
     my ($self, $zone) = @_;
 
     croak "missing zone name!" if ! $zone;
 
-    my $file = $self->{ps_file} || 'share/public_suffix_list';
+    my $file = $self->config->{dns}{public_suffix_list} || 'share/public_suffix_list';
     my @dirs = qw[ ./ /usr/local/ /usr/ /opt/local ];
     my $match;
     foreach my $dir ( @dirs ) {
@@ -68,13 +60,25 @@ sub has_dns_rr {
 
 sub get_resolver {
     my $self = shift;
-    my $timeout = shift || $self->{dns_timeout} || 5;
+    my $timeout = shift || $self->config->{dns}{timeout} || 5;
     return $self->{resolver} if defined $self->{resolver};
     $self->{resolver} = Net::DNS::Resolver->new(dnsrch => 0);
     $self->{resolver}->tcp_timeout($timeout);
     $self->{resolver}->udp_timeout($timeout);
     return $self->{resolver};
 }
+
+sub get_domain_mx {
+    my ($self, $domain) = @_;
+    my $res = $self->get_resolver();
+    my $query = $res->query($domain, 'MX') or return [];
+    my @mx;
+    for my $rr ($query->answer) {
+        next if $rr->type ne 'MX';
+        push @mx, { pref=> $rr->preference, addr=> $rr->exchange };
+    }
+    return \@mx;
+};
 
 sub is_valid_ip {
     my ($self, $ip) = @_;
@@ -113,7 +117,7 @@ Mail::DMARC::DNS - DNS functions for DMARC
 
 =head1 VERSION
 
-version 0.20130510
+version 0.20130514
 
 =head1 METHODS
 

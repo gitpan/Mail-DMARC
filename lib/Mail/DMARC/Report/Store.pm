@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Store;
 {
-  $Mail::DMARC::Report::Store::VERSION = '0.20130510';
+  $Mail::DMARC::Report::Store::VERSION = '0.20130514';
 }
 use strict;
 use warnings;
@@ -11,7 +11,13 @@ use parent 'Mail::DMARC::Base';
 
 sub save {
     my $self = shift;
-    return $self->backend->save(@_);
+    my $dmarc = shift or croak "need a DMARC object!";
+    return $self->backend->save($dmarc);
+};
+
+sub delete_report {
+    my $self = shift;
+    return $self->backend->delete_report(@_);
 };
 
 sub retrieve {
@@ -47,7 +53,7 @@ Mail::DMARC::Report::Store - persistent storage broker for DMARC reports
 
 =head1 VERSION
 
-version 0.20130510
+version 0.20130514
 
 =head1 DESCRIPTION
 

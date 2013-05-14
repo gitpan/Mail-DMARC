@@ -1,6 +1,6 @@
 package Mail::DMARC::PurePerl;
 {
-  $Mail::DMARC::PurePerl::VERSION = '0.20130510';
+  $Mail::DMARC::PurePerl::VERSION = '0.20130514';
 }
 use strict;
 use warnings;
@@ -8,6 +8,7 @@ use warnings;
 use Carp;
 
 use parent 'Mail::DMARC';
+require Mail::DMARC::Report::URI;
 
 sub init {
     my $self = shift;
@@ -97,7 +98,7 @@ sub discover_policy {
     if (scalar @$matches > 1) {
         $e->result('fail');
         $e->disposition('none');
-        $e->reason(type=>'other', comment=> "too many DMARC records" );
+        $e->reason(type=>'other', comment=> "too many policies" );
         return;
     }
 
@@ -119,7 +120,7 @@ sub discover_policy {
         if (!$policy->rua || !$self->has_valid_reporting_uri($policy->rua)) {
             $e->result('fail');
             $e->disposition('none');
-            $e->reason( type=>'other', comment=> "no valid reporting rua" );
+            $e->reason( type=>'other', comment=> "no valid rua" );
             return;
         }
         $policy->v( 'DMARC1' );
@@ -243,8 +244,9 @@ sub is_spf_aligned {
 
 sub has_valid_reporting_uri {
     my ($self, $rua) = @_;
-    return 1 if 'mailto:' eq lc substr($rua, 0, 7);
-    return 0;
+    $self->{uri} ||= Mail::DMARC::Report::URI->new;
+    my $recips_ref = $self->{uri}->parse($rua);
+    return scalar @$recips_ref;
 }
 
 sub get_dkim_pass_sigs {
@@ -350,14 +352,15 @@ sub fetch_dmarc_record {
     #       Domain in place of the RFC5322.From domain in the message (if
     #       different).  This record can contain policy to be asserted for
     #       subdomains of the Organizational Domain.
-    if ( defined $org_dom ) {                         #   <- recursion break
-        return \@matches if $org_dom eq $zone;
-        return $self->fetch_dmarc_record($org_dom);   #   <- recursion
+    if ( defined $org_dom ) {                           #  <- recursion break
+        if ( $org_dom ne $zone ) {
+            return $self->fetch_dmarc_record($org_dom); #  <- recursion
+        };
     };
  
     $self->result->evaluated->result('fail');
     $self->result->evaluated->disposition('none');
-    $self->result->evaluated->reason( type=>'other',comment=>'no DMARC record found');
+    $self->result->evaluated->reason( type=>'other',comment=>'no policy');
     return \@matches;
 }
 
@@ -383,22 +386,16 @@ sub get_dom_from_header {
 
 # Should I do something special with a From field with multiple addresses?
 # Do what if the domains differ? This returns only the last.
-# Callers can pass in pre-parsed from_dom if this doesn't suit them.
+# Caller can pass in pre-parsed from_dom if this doesn't suit them.
 #
-# I only care about extracting the domain. This is way faster than attempting
-# to parse a RFC822 address.
-    if ( 'from:' eq lc substr($header,0,5) ) { # if From: prefix is present
-        $header = substr $header, 6;           # remove it
-    };
+# I care only about the domain. This is way faster than RFC822 parsing
 
     my ($from_dom) = (split /@/, $header)[-1]; # grab everything after the @
-    ($from_dom) = split /\s+/, $from_dom;      # remove any trailing cruft
-    chomp $from_dom;                           # remove \n
-    chop $from_dom if '>' eq substr($from_dom, -1, 1); # remove closing >
+    ($from_dom) = split /(\s+|>)/, $from_dom;  # remove trailing cruft
     if ( ! $from_dom ) {
         $e->result('fail');
         $e->disposition('none');
-        $e->reason( type=>'other', comment => "invalid header_from domain");
+        $e->reason( type=>'other', comment => "invalid header_from: ($header)");
         return;
     };
     return $self->header_from($from_dom);
@@ -406,7 +403,7 @@ sub get_dom_from_header {
 
 sub external_report {
     my $self = shift;
-# TODO:
+# TODO
     return;
 };
 
@@ -428,7 +425,7 @@ Mail::DMARC::PurePerl - a perl implementation of DMARC
 
 =head1 VERSION
 
-version 0.20130510
+version 0.20130514
 
 =head1 METHODS
 

@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Receive;
 {
-  $Mail::DMARC::Report::Receive::VERSION = '0.20130510';
+  $Mail::DMARC::Report::Receive::VERSION = '0.20130514';
 }
 use strict;
 use warnings;
@@ -22,7 +22,7 @@ Mail::DMARC::Report::Receive - receive a DMARC report
 
 =head1 VERSION
 
-version 0.20130510
+version 0.20130514
 
 =head1 DESCRIPTION
 

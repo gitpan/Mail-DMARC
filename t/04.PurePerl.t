@@ -36,13 +36,36 @@ test_is_dkim_aligned();
 test_is_aligned();
 test_discover_policy();
 test_validate();
+test_has_valid_reporting_uri();
 
-# has_valid_reporting_uri
 # external_report
 # verify_external_reporting
 
 done_testing();
 exit;
+
+sub test_has_valid_reporting_uri {
+    my @valid = (
+        'mailto:dmarc@example.com',
+        'mailto:dmarc@example.com,http://www.example.com/dmarc',
+        'ftp://dmarc.example.com,http://www.example.com/dmarc',
+        );
+    foreach my $v ( @valid ) {
+        my $r_ref = $dmarc->has_valid_reporting_uri($v);
+        ok( $r_ref, "has_valid_reporting_uri, $v");
+    };
+
+# invalid tests
+    my @invalid = (
+        'ftp://ftp.example.com,gopher://www.example.com/dmarc',
+        'scp://secure.example.com',
+        );
+    foreach my $v ( @invalid ) {
+        my $r = $dmarc->has_valid_reporting_uri($v);
+        ok( ! $r, "has_valid_reporting_uri, neg, $v")
+            or diag Dumper($r);
+    };
+};
 
 sub test_discover_policy {
     $dmarc->init();
@@ -73,6 +96,7 @@ sub get_test_headers {
         'Sample User <user@example.com>'                => 'example.com',
         'user@example.com'                              => 'example.com',
         '<user@example.com>'                            => 'example.com',
+        ' <user@example.com > '                         => 'example.com',
         'Sample User <user@example.com>,Sample2<user@example2.com>' => 'example2.com',
         );
 };

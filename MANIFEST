@@ -8,6 +8,8 @@ Makefile.PL
 README
 README.md
 bin/dmarc_lookup
+bin/dmarc_report
+bin/install_deps.pl
 dist.ini
 lib/Mail/DMARC.pm
 lib/Mail/DMARC/Base.pm
@@ -30,7 +32,7 @@ lib/Mail/DMARC/Report/View/HTTP.pm
 lib/Mail/DMARC/Result.pm
 lib/Mail/DMARC/Result/Evaluated.pm
 mail-dmarc.ini
-share/dmarc-report-2013-draft.xml
+share/dmarc-report-2013-draft.xsd
 share/public_suffix_list
 share/report-format.pod
 sql/mail_dmarc.mysql
@@ -54,4 +56,3 @@ t/author-critic.t
 t/mail-dmarc.ini
 t/perlcritic.rc
 t/release-pod-syntax.t
-t/reports-test.sqlite
