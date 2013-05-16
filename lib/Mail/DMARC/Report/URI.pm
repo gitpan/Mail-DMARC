@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::URI;
 {
-  $Mail::DMARC::Report::URI::VERSION = '0.20130514';
+  $Mail::DMARC::Report::URI::VERSION = '0.20130515';
 }
 use strict;
 use warnings;
@@ -62,7 +62,7 @@ Mail::DMARC::Report::URI - a DMARC reporting URI
 
 =head1 VERSION
 
-version 0.20130514
+version 0.20130515
 
 =head1 DESCRIPTION
 

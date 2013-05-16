@@ -1,6 +1,6 @@
 package Mail::DMARC::Result;
 {
-  $Mail::DMARC::Result::VERSION = '0.20130514';
+  $Mail::DMARC::Result::VERSION = '0.20130515';
 }
 use strict;
 use warnings;
@@ -46,7 +46,7 @@ Mail::DMARC::Result - DMARC processing results
 
 =head1 VERSION
 
-version 0.20130514
+version 0.20130515
 
 =head1 METHDS
 

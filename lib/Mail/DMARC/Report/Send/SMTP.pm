@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Send::SMTP;
 {
-  $Mail::DMARC::Report::Send::SMTP::VERSION = '0.20130514';
+  $Mail::DMARC::Report::Send::SMTP::VERSION = '0.20130515';
 }
 use strict;
 use warnings;
@@ -13,7 +13,6 @@ use Sys::Hostname;
 use POSIX;
 
 use parent 'Mail::DMARC::Base';
-use Mail::DMARC::DNS;
 
 sub email {
     my ($self, @args) = @_;
@@ -29,6 +28,13 @@ sub email {
         croak "missing required header: $req" if ! $args{$req};
     };
 
+    my $cc = $self->config->{smtp}{cc};
+    if ( $cc && $cc ne 'set.this@for.a.while.example.com' ) {
+        my $original_to = $args{to};
+        $args{to} = $cc;
+        $self->via_net_smtp( \%args );
+        $args{to} = $original_to;
+    };
     return $self->via_net_smtp(\%args);
 
 #    eval { require MIME::Lite; }; ## no critic (Eval)
@@ -48,8 +54,8 @@ sub via_net_smtp {
     my @try_mx = map { $_->{addr} }
         sort { $a->{pref} <=> $b->{pref} } @$hosts;
 
-    my $config = $self->config->{smtp};
-    my $hostname = $config->{hostname};
+    my $c = $self->config->{smtp};
+    my $hostname = $c->{hostname};
     if ( ! $hostname || $hostname eq 'mail.example.com' ) {
         $hostname = Sys::Hostname::hostname;
     };
@@ -62,15 +68,18 @@ sub via_net_smtp {
             Port    => $to_domain eq 'theartfarm.com' ? 587 : 25,
             Hello   => $hostname,
             doSSL   => 'starttls',
+            SSL_verify_mode => 'SSL_VERIFY_NONE',
             )
         or do {
             carp "$err but 0 available for $to_domain\n";
             return;
         };
 
-    if ( $config->{smarthost} && $config->{smartuser} && $config->{smartpass} ) {
-        $smtp->auth($config->{smartuser}, $config->{smartpass} ) or do {
-            carp "$err but auth attempt for $config->{smartuser} failed";
+    carp "deliving message to $args->{to}\n";
+
+    if ( $c->{smarthost} && $c->{smartuser} && $c->{smartpass} ) {
+        $smtp->auth($c->{smartuser}, $c->{smartpass} ) or do {
+            carp "$err but auth attempt for $c->{smartuser} failed";
         };
     };
     my $from = $self->config->{organization}{email};
@@ -92,6 +101,18 @@ sub via_net_smtp {
     return 1;
 };
 
+sub get_domain_mx {
+    my ($self, $domain) = @_;
+    my $res = $self->get_resolver();
+    my $query = $res->query($domain, 'MX') or return [];
+    my @mx;
+    for my $rr ($query->answer) {
+        next if $rr->type ne 'MX';
+        push @mx, { pref=> $rr->preference, addr=> $rr->exchange };
+    }
+    return \@mx;
+};
+
 sub get_to_dom {
     my ($self, $args) = @_;
     croak "invalid args" if 'HASH' ne ref $args;
@@ -107,8 +128,7 @@ sub get_smtp_hosts {
         return [ {addr => $self->config->{smtp}{smarthost} } ];
     };
 
-    $self->{dns} ||= Mail::DMARC::DNS->new();
-    return $self->{dns}->get_domain_mx($domain);
+    return $self->get_domain_mx($domain);
 };
 
 sub get_subject {
@@ -171,8 +191,6 @@ sub _assemble_message {
         ) or croak "unable to assemble message\n";
 
     return $email->as_string;
-
-# Date: Fri, Feb 15 2002 16:54:30 -0800
 }
 
 sub via_mail_sender {
@@ -186,7 +204,6 @@ sub via_mime_lite {
     my $message = MIME::Lite->new(
         From    => $self->config->{organization}{email},
         To      => $args->{to},
-        Cc      => $self->config->{smtp}{cc},
         Subject => $args->{subject},
         Type    => $args->{type} || 'multipart/alternative',
     );
@@ -230,7 +247,7 @@ Mail::DMARC::Report::Send::SMTP - send DMARC reports via SMTP
 
 =head1 VERSION
 
-version 0.20130514
+version 0.20130515
 
 =head2 SUBJECT FIELD
 

@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::AFRF;
 {
-  $Mail::DMARC::Report::AFRF::VERSION = '0.20130514';
+  $Mail::DMARC::Report::AFRF::VERSION = '0.20130515';
 }
 use strict;
 use warnings;
@@ -19,7 +19,7 @@ Mail::DMARC::Report::AFRF - an AFRF report
 
 =head1 VERSION
 
-version 0.20130514
+version 0.20130515
 
 =head1 DESCRIPTION
 

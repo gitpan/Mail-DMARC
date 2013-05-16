@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Send;
 {
-  $Mail::DMARC::Report::Send::VERSION = '0.20130514';
+  $Mail::DMARC::Report::Send::VERSION = '0.20130515';
 }
 use strict;
 use warnings;
@@ -42,7 +42,21 @@ sub send_rua {
 
 sub human_summary {
     my ($self, $report) = @_;
-    return "\n\t This is only a test body. It will get better\n\n";
+
+    my $rows = scalar @{ $$report->{rows} };
+    my $OrgName = $self->config->{organization}{org_name};
+    my $pass = grep { $_->{dkim} eq 'pass' || $_->{spf} eq 'pass' } @{ $$report->{rows} };
+    my $fail = grep { $_->{dkim} ne 'pass' && $_->{spf} ne 'pass' } @{ $$report->{rows} };
+
+    return <<"EO_REPORT"
+
+DMARC report submitted by $OrgName
+$rows rows.
+$pass passed.
+$fail failed.
+
+EO_REPORT
+;
 };
 
 sub send_via_smtp {
@@ -85,7 +99,7 @@ Mail::DMARC::Report::Send - send a DMARC report object
 
 =head1 VERSION
 
-version 0.20130514
+version 0.20130515
 
 =head1 DESCRIPTION
 

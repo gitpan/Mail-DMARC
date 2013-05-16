@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Send::HTTP;
 {
-  $Mail::DMARC::Report::Send::HTTP::VERSION = '0.20130514';
+  $Mail::DMARC::Report::Send::HTTP::VERSION = '0.20130515';
 }
 use strict;
 use warnings;
@@ -23,7 +23,7 @@ Mail::DMARC::Report::Send::HTTP - send DMARC reports via HTTP
 
 =head1 VERSION
 
-version 0.20130514
+version 0.20130515
 
 =head1 12.2.2. HTTP
 

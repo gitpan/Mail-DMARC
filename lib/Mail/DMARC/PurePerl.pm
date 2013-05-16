@@ -1,6 +1,6 @@
 package Mail::DMARC::PurePerl;
 {
-  $Mail::DMARC::PurePerl::VERSION = '0.20130514';
+  $Mail::DMARC::PurePerl::VERSION = '0.20130515';
 }
 use strict;
 use warnings;
@@ -8,7 +8,6 @@ use warnings;
 use Carp;
 
 use parent 'Mail::DMARC';
-require Mail::DMARC::Report::URI;
 
 sub init {
     my $self = shift;
@@ -155,6 +154,9 @@ sub is_aligned {
 sub is_dkim_aligned {
     my $self = shift;
 
+    $self->result->evaluated->dkim('fail'); # our 'default' result
+    my $pass_sigs = $self->get_dkim_pass_sigs() or return;
+
 # 11.2.3 Perform DKIM signature verification checks.  A single email may
 #        contain multiple DKIM signatures.  The results MUST include the
 #        value of the "d=" tag from all DKIM signatures that validated.
@@ -168,7 +170,7 @@ sub is_dkim_aligned {
         my $dkim_dom = $dkim_ref->{domain};
 
         # 4.3.1 make sure $dkim_dom is not a public suffix
-        next if $self->dns->is_public_suffix($dkim_dom);
+        next if $self->is_public_suffix($dkim_dom);
 
         my $dkmeta = {
             domain   => $dkim_ref->{domain},
@@ -198,7 +200,6 @@ sub is_dkim_aligned {
         };
     };
     return 1 if 'pass' eq $self->result->evaluated->dkim;
-    $self->result->evaluated->dkim('fail');  # any result that is not pass
     return;
 };
 
@@ -244,15 +245,23 @@ sub is_spf_aligned {
 
 sub has_valid_reporting_uri {
     my ($self, $rua) = @_;
-    $self->{uri} ||= Mail::DMARC::Report::URI->new;
-    my $recips_ref = $self->{uri}->parse($rua);
-    return scalar @$recips_ref;
+    my $recips_ref = $self->report->uri->parse($rua);
+    my @has_permission;
+    foreach my $uri_ref ( @$recips_ref ) {
+        if ( ! $self->external_report($uri_ref->{uri}) ) {
+            push @has_permission, $uri_ref;
+            next;
+        };
+        my $ext = $self->verify_external_reporting($uri_ref);
+        push @has_permission, $ext if $ext;
+    };
+    return scalar @has_permission;
 }
 
 sub get_dkim_pass_sigs {
     my $self = shift;
 
-    my $dkim_sigs = $self->dkim or croak "missing dkim!";
+    my $dkim_sigs = $self->dkim or return (); # message not signed
     if ( 'ARRAY' ne ref $dkim_sigs ) {
         croak "dkim needs to be an array reference!";
     };
@@ -281,7 +290,7 @@ sub get_organizational_domain {
         next if !$labels[$i];
         my $tld = join '.', reverse((@labels)[0 .. $i]);
 
-        if ( $self->dns->is_public_suffix($tld) ) {
+        if ( $self->is_public_suffix($tld) ) {
             $greatest = $i + 1;
         }
     }
@@ -313,10 +322,10 @@ sub exists_in_dns {
     my $matched = 0;
     foreach ( @todo ) {
         last if $matched;
-        $matched++ and next if $self->dns->has_dns_rr('MX', $_);
-        $matched++ and next if $self->dns->has_dns_rr('NS', $_);
-        $matched++ and next if $self->dns->has_dns_rr('A',  $_);
-        $matched++ and next if $self->dns->has_dns_rr('AAAA', $_);
+        $matched++ and next if $self->has_dns_rr('MX', $_);
+        $matched++ and next if $self->has_dns_rr('NS', $_);
+        $matched++ and next if $self->has_dns_rr('A',  $_);
+        $matched++ and next if $self->has_dns_rr('AAAA', $_);
     };
     if ( ! $matched ) {
         $self->result->evaluated->result('fail');
@@ -335,7 +344,7 @@ sub fetch_dmarc_record {
     #     the message. A possibly empty set of records is returned.
     $self->is_subdomain( defined $org_dom ? 0 : 1 );
     my @matches = ();
-    my $res = $self->dns->get_resolver();
+    my $res = $self->get_resolver();
     my $query = $res->send("_dmarc.$zone", 'TXT') or return \@matches;
     for my $rr ($query->answer) {
         next if $rr->type ne 'TXT';
@@ -357,7 +366,7 @@ sub fetch_dmarc_record {
             return $self->fetch_dmarc_record($org_dom); #  <- recursion
         };
     };
- 
+
     $self->result->evaluated->result('fail');
     $self->result->evaluated->disposition('none');
     $self->result->evaluated->reason( type=>'other',comment=>'no policy');
@@ -402,15 +411,72 @@ sub get_dom_from_header {
 }
 
 sub external_report {
-    my $self = shift;
-# TODO
-    return;
+    my ($self, $uri) = @_;
+    my $dmarc_dom = $self->result->published->{domain}
+        or croak "published policy not tagged!";
+
+    if ( 'mailto' eq $uri->scheme ) {
+        my $dest_email = $uri->path;
+        my ($dest_host) = (split /@/, $dest_email)[-1];
+        return 0 if $dest_host eq $dmarc_dom;
+    }
+
+    if ( 'http' eq $uri->scheme ) {
+        return 0 if $uri->host eq $dmarc_dom;
+    };
+
+    return 1;
 };
 
 sub verify_external_reporting {
     my $self = shift;
-# TODO
-    return;
+    my $uri_ref = shift or croak "missing URI";
+
+#  1.  Extract the host portion of the authority component of the URI.
+#      Call this the "destination host".
+    my $dmarc_dom = $self->result->published->{domain}
+        or croak "published policy not tagged!";
+
+    my $dest_email = $uri_ref->{uri}->path or croak("invalid URI");
+    my ($dest_host) = (split /@/, $dest_email)[-1];
+
+#  2.  Prepend the string "_report._dmarc".
+#  3.  Prepend the domain name from which the policy was retrieved,
+#      after conversion to an A-label if needed.
+    my $dest = join '.', $dmarc_dom, '_report._dmarc', $dest_host;
+
+#  4.  Query the DNS for a TXT record at the constructed name.
+    my $query = $self->get_resolver->query($dest, 'TXT') or return;
+
+#  5.  For each record, parse the result...same overall format:
+#      "v=DMARC1" tag is mandatory and MUST appear first in the list.
+    my @matches;
+    for my $rr ($query->answer) {
+        next if $rr->type ne 'TXT';
+
+        next if 'v=dmarc1' ne lc substr($rr->txtdata, 0, 8);
+        my $policy = undef;
+        my $dmarc_str = join('', $rr->txtdata);  # join ports
+        eval { $policy = $self->policy->parse( $dmarc_str ) }; ## no critic (Eval)
+        push @matches, $policy ? $policy : $dmarc_str;
+    };
+
+#  6.  If the result includes no TXT resource records...stop
+    return if ! scalar @matches;
+
+#  7.  If > 1 TXT resource record remains, external reporting authorized
+#  8.  If a "rua" or "ruf" tag is discovered, replace the
+#      corresponding value with the one found in this record.
+    my @overrides = grep { ref $_ && $_->{rua} } @matches;
+    foreach my $or ( @overrides ) {
+        my $recips_ref = $self->report->uri->parse($or->{rua}) or next;
+        if ( (split /@/, $recips_ref->[0]{uri})[-1] eq (split /@/, $uri_ref->{uri})[-1] ) {
+# the overriding URI MUST use the same destination host from the first step.
+            $self->result->published->rua($or->{rua});
+        };
+    };
+
+    return @matches;
 }
 
 1;
@@ -425,7 +491,7 @@ Mail::DMARC::PurePerl - a perl implementation of DMARC
 
 =head1 VERSION
 
-version 0.20130514
+version 0.20130515
 
 =head1 METHODS
 
@@ -489,6 +555,25 @@ there is no delegation from the TLD. That has proven very reliable.
 
 =head2 external_report
 
+=head3 8.2.  Verifying External Destinations
+
+It is possible to specify destinations for the different reports that
+are outside the domain making the request.  This is enabled to allow
+domains that do not have mail servers to request reports and have
+them go someplace that is able to receive and process them.
+
+Without checks, this would allow a bad actor to publish a DMARC
+policy record that requests reports be sent to a victim address, and
+then send a large volume of mail that will fail both DKIM and SPF
+checks to a wide variety of destinations, which will in turn flood
+the victim with unwanted reports.  Therefore, a verification
+mechanism is included.
+
+When a Mail Receiver discovers a DMARC policy in the DNS, and the
+domain at which that record was discovered is not identical to the
+host part of the authority component of a [URI] specified in the
+"rua" or "ruf" tag, the following verification steps SHOULD be taken:
+
 =head2 verify_external_reporting
 
 =head1 AUTHORS
@@ -516,4 +601,5 @@ the same terms as the Perl 5 programming language system itself.
 
 
 __END__
+sub {}
 

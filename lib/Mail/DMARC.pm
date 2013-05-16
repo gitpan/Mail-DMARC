@@ -1,44 +1,38 @@
 package Mail::DMARC;
 {
-  $Mail::DMARC::VERSION = '0.20130514';
+  $Mail::DMARC::VERSION = '0.20130515';
 }
 use strict;
 use warnings;
 
 use Carp;
 
-require Mail::DMARC::DNS;
+use parent 'Mail::DMARC::Base';
 require Mail::DMARC::Policy;
 require Mail::DMARC::Report;
 require Mail::DMARC::Result;
 
-sub new {
-    my ($class, @args) = @_;
-    croak "invalid arguments" if @args % 2 != 0;
-    return bless { @args }, $class;
-};
-
 sub source_ip {
     return $_[0]->{source_ip} if 1 == scalar @_;
-    croak "invalid source_ip" if ! $_[0]->dns->is_valid_ip($_[1]);
+    croak "invalid source_ip" if ! $_[0]->is_valid_ip($_[1]);
     return $_[0]->{source_ip} = $_[1];
 };
 
 sub envelope_to {
     return $_[0]->{envelope_to} if 1 == scalar @_;
-    croak "invalid envelope_to" if ! $_[0]->dns->is_valid_domain($_[1]);
+    croak "invalid envelope_to" if ! $_[0]->is_valid_domain($_[1]);
     return $_[0]->{envelope_to} = $_[1];
 };
 
 sub envelope_from {
     return $_[0]->{envelope_from} if 1 == scalar @_;
-    croak "invalid envelope_from" if ! $_[0]->dns->is_valid_domain($_[1]);
+    croak "invalid envelope_from" if ! $_[0]->is_valid_domain($_[1]);
     return $_[0]->{envelope_from} = $_[1];
 };
 
 sub header_from {
     return $_[0]->{header_from} if 1 == scalar @_;
-    croak "invalid header_from" if ! $_[0]->dns->is_valid_domain($_[1]);
+    croak "invalid header_from" if ! $_[0]->is_valid_domain($_[1]);
     return $_[0]->{header_from} = $_[1];
 };
 
@@ -101,12 +95,6 @@ sub spf {
     return $self->{spf};
 };
 
-sub dns {
-    my $self = shift;
-    return $self->{dns} if ref $self->{dns};
-    return $self->{dns} = Mail::DMARC::DNS->new();
-};
-
 sub policy {
     my ($self, @args) = @_;
     return $self->{policy} if ref $self->{policy} && 0 == scalar @args;
@@ -159,7 +147,7 @@ Mail::DMARC - Perl implementation of DMARC
 
 =head1 VERSION
 
-version 0.20130514
+version 0.20130515
 
 =head1 SYNOPSIS
 
@@ -180,8 +168,6 @@ Results of DMARC processing are stored in a L<Mail::DMARC::Result> object.
 =head1 CLASSES
 
 L<Mail::DMARC> - A perl implementation of the DMARC draft
-
-L<Mail::DMARC::DNS> - DNS functions used in DMARC
 
 L<Mail::DMARC::Policy> - a DMARC record in object format
 

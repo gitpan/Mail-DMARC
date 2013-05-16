@@ -1,6 +1,6 @@
 package Mail::DMARC::Policy;
 {
-  $Mail::DMARC::Policy::VERSION = '0.20130514';
+  $Mail::DMARC::Policy::VERSION = '0.20130515';
 }
 use strict;
 use warnings;
@@ -140,7 +140,14 @@ sub is_valid {
     $obj = $self if ! $obj;
     croak "missing version specifier" if ! $obj->{v};
     croak "invalid version" if 'DMARC1' ne uc $obj->{v};
-    croak "missing policy action" if ! $obj->{p};
+    if ( ! $obj->{p} ) {
+        if ( $obj->{rua} && $self->is_valid_uri_list($obj->{rua}) ) {
+            $obj->{p} = 'none';
+        }
+        else {
+            croak "missing policy action (p=)";
+        };
+    };
     croak "invalid policy action" if ! $self->is_valid_p( $obj->{p} );
 # everything else is optional
     return 1;
@@ -158,7 +165,7 @@ Mail::DMARC::Policy - a DMARC policy in object format
 
 =head1 VERSION
 
-version 0.20130514
+version 0.20130515
 
 =head1 EXAMPLES
 

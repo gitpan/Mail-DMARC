@@ -6,6 +6,8 @@ use warnings;
 
 use ExtUtils::MakeMaker 6.30;
 
+use File::ShareDir::Install;
+install_share dist => "share";
 
 
 my %WriteMakefileArgs = (
@@ -13,19 +15,27 @@ my %WriteMakefileArgs = (
   "AUTHOR" => "Matt Simerson <msimerson\@cpan.org>, Davide Migliavacca <shari\@cpan.org>",
   "BUILD_REQUIRES" => {},
   "CONFIGURE_REQUIRES" => {
-    "ExtUtils::MakeMaker" => "6.30"
+    "ExtUtils::MakeMaker" => "6.30",
+    "File::ShareDir::Install" => "0.03"
   },
   "DISTNAME" => "Mail-DMARC",
-  "EXE_FILES" => [],
+  "EXE_FILES" => [
+    "bin/dmarc_lookup",
+    "bin/dmarc_report",
+    "bin/install_deps.pl"
+  ],
   "LICENSE" => "perl",
   "NAME" => "Mail::DMARC",
   "PREREQ_PM" => {
+    "CPAN" => 0,
     "Carp" => 0,
     "Config::Tiny" => 0,
+    "DBD::SQLite" => "1.31",
     "DBIx::Simple" => 0,
     "Data::Dumper" => 0,
     "Email::MIME" => 0,
     "English" => 0,
+    "File::ShareDir" => 0,
     "IO::Compress::Gzip" => 0,
     "IO::File" => 0,
     "Net::DNS::Resolver" => 0,
@@ -43,7 +53,7 @@ my %WriteMakefileArgs = (
   "TEST_REQUIRES" => {
     "Test::More" => 0
   },
-  "VERSION" => "0.20130514",
+  "VERSION" => "0.20130515",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -81,5 +91,10 @@ delete $WriteMakefileArgs{CONFIGURE_REQUIRES}
 
 WriteMakefile(%WriteMakefileArgs);
 
+{
+package
+MY;
+use File::ShareDir::Install qw(postamble);
+}
 
 

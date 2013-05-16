@@ -13,7 +13,6 @@ bin/install_deps.pl
 dist.ini
 lib/Mail/DMARC.pm
 lib/Mail/DMARC/Base.pm
-lib/Mail/DMARC/DNS.pm
 lib/Mail/DMARC/Policy.pm
 lib/Mail/DMARC/PurePerl.pm
 lib/Mail/DMARC/Report.pm
@@ -33,13 +32,12 @@ lib/Mail/DMARC/Result.pm
 lib/Mail/DMARC/Result/Evaluated.pm
 mail-dmarc.ini
 share/dmarc-report-2013-draft.xsd
+share/mail_dmarc_schema.mysql
+share/mail_dmarc_schema.sqlite
 share/public_suffix_list
 share/report-format.pod
-sql/mail_dmarc.mysql
-sql/mail_dmarc.sqlite
 t/00.Dmarc.t
 t/01.Policy.t
-t/02.DNS.t
 t/03.Base.t
 t/04.PurePerl.t
 t/06.Result.t

@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Store::SQL;
 {
-  $Mail::DMARC::Report::Store::SQL::VERSION = '0.20130514';
+  $Mail::DMARC::Report::Store::SQL::VERSION = '0.20130515';
 }
 use strict;
 use warnings;
@@ -8,6 +8,7 @@ use warnings;
 use Carp;
 use Data::Dumper;
 use DBIx::Simple;
+use File::ShareDir;
 
 use parent 'Mail::DMARC::Base';
 
@@ -78,7 +79,10 @@ sub insert_rr_reason {
     };
     my $comment = $self->dmarc->result->evaluated->reason->comment || '';
     return $self->query( 'INSERT INTO report_record_disp_reason (report_record_id, type, comment) VALUES (?,?,?)',
-            [ $self->{report_row_id}, $type, $comment ]
+            [ $self->{report_row_id},
+              $type,
+              $comment || ''
+            ]
         );
 };
 
@@ -123,8 +127,10 @@ sub insert_report_row {
     my $eva = $self->dmarc->result->evaluated or croak "no evaluated report?!";
 # using SQL SET rather than INSERT won't break when the table schema changes
     my $query = <<'EO_ROW_INSERT'
-INSERT INTO report_record (report_id, source_ip, disposition,
-    dkim, spf, header_from, envelope_to, envelope_from ) VALUES (?,?,?,?,?,?,?,?)
+INSERT INTO report_record
+   (report_id, source_ip, disposition, dkim, spf,
+    header_from, envelope_to, envelope_from )
+   VALUES (?,?,?,?,?,?,?,?)
 EO_ROW_INSERT
 ;
     my $args = [
@@ -165,7 +171,7 @@ sub insert_report {
         $header_from, time,
         time + ($self->dmarc->result->published->ri || 86400),
         ]
-    );
+    ) or return;
 
     $self->insert_report_published_policy();
     return $self->{report_id};
@@ -197,22 +203,38 @@ sub db_connect {
     my $user = $self->config->{report_store}{user};
     my $pass = $self->config->{report_store}{pass};
 
+    my $needs_tables;
     if ( $dsn =~ /sqlite/i ) {
-        my ($file) = (split /=/, $dsn)[-1];
-        if ( ! $file || ! -e $file ) {
-            if ( -f 'sql/mail_dmarc.sqlite' ) {
-                system "sqlite3 $file < sql/mail_dmarc.sqlite";
-            }
-            else {
-                croak "no such DB file $file!\n";
-            };
+        my ($db) = (split /=/, $dsn)[-1];
+        if ( ! $db || $db eq ':memory:' || ! -e $db ) {
+            my $schema = 'mail_dmarc_schema.sqlite';
+            $needs_tables = $self->get_db_schema($schema) or
+                croak "can't locate DB $db AND can't find $schema! Create $db manually.\n";
         };
     };
 
     $self->{dbh} = DBIx::Simple->connect( $dsn, $user, $pass )
         or return $self->error( DBIx::Simple->error );
 
+    if ( $needs_tables ) {
+        $self->apply_db_schema($needs_tables);
+    };
     return $self->{dbh};
+};
+
+sub apply_db_schema {
+    my ($self, $file) = @_;
+    open my $FH, '<', $file or croak "unable to read $file";
+    my $setup = do { local $/; <$FH> }; ## no critic (Local)
+    close $FH;
+    foreach ( split /;/, $setup ) { $self->{dbh}->query($_); };
+    return;
+};
+
+sub get_db_schema {
+    my ($self, $file) = @_;
+    return "share/$file" if -f "share/$file";              # when testing
+    return File::ShareDir::dist_file('Mail-DMARC', $file); # when installed
 };
 
 sub query {
@@ -312,7 +334,7 @@ Mail::DMARC::Report::Store::SQL - Store DMARC reports
 
 =head1 VERSION
 
-version 0.20130514
+version 0.20130515
 
 =head1 DESCRIPTION
 
