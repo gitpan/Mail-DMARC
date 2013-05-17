@@ -1,6 +1,6 @@
 package Mail::DMARC::Report;
 {
-  $Mail::DMARC::Report::VERSION = '0.20130515';
+  $Mail::DMARC::Report::VERSION = '0.20130517';
 }
 use strict;
 use warnings;
@@ -51,19 +51,14 @@ sub view {
     return $self->{view} = Mail::DMARC::Report::View->new;
 };
 
-sub send_each {
+sub save_receiver {
     my $self = shift;
-    croak "missing dmarc object!" if ! $self->{dmarc};
-#   foreach my $rua ( @$ruas ) {
-        return $self->store->sendit->via->email($self->{dmarc});
-#         or
-#       return $self->store->sendit->via->http($self->{dmarc});
-#   };
+    return $self->store->backend->save_receiver(@_);
 };
 
-sub save {
+sub save_author {
     my $self = shift;
-    return $self->store->backend->save(@_);
+    return $self->store->backend->save_author(@_);
 };
 
 sub assemble_xml {
@@ -212,7 +207,7 @@ Mail::DMARC::Report - A DMARC report object
 
 =head1 VERSION
 
-version 0.20130515
+version 0.20130517
 
 =head1 DESCRIPTION
 
@@ -344,6 +339,16 @@ can be used to seek assistance.
 [NOTE: A more rigorous syntax specification, including ABNF and
 possible registration of a new media type, will be added here when
 more operational experience is acquired.]
+
+=head1 AFRF reports
+
+=head1 IODEF reports
+
+https://datatracker.ietf.org/doc/draft-kucherawy-dmarc-base/?include_text=1
+
+Section 3.5 Out of Scope:
+
+    This first version of DMARC supports only a single reporting format.
 
 =head1 AUTHORS
 

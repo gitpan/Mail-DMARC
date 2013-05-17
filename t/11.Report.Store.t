@@ -29,33 +29,33 @@ setup_dmarc_result() or die "failed setup\n";
 $dmarc->report->store->backend->config('t/mail-dmarc.ini');
 
 test_reason();
-test_save();
+test_save_receiver();
 
-
-#unlink 't/reports-test.sqlite';  # test DB
 done_testing();
 exit;
 
-sub test_save {
-    my $r = $dmarc->report->save($dmarc);
-    ok( $r, "save results" );
+sub test_save_receiver {
+    my $r = $dmarc->report->save_receiver($dmarc);
+    ok( $r, "save receiver results" );
     print Dumper($r);
 };
 
 sub test_reason {
-    $dmarc->result->evaluated->reason->type('other');
-    $dmarc->result->evaluated->reason->comment('testing');
+    $dmarc->result->reason->type('other');
+    $dmarc->result->reason->comment('testing');
 }
 
 sub setup_dmarc_result {
 
     $dmarc->init();
     $dmarc->header_from( $test_dom );
+    $dmarc->envelope_to( 'recipient.com' );
     $dmarc->source_ip( '192.2.1.1' );
     $dmarc->dkim([{ domain => $test_dom, result=>'pass', selector=> 'apr2013' }]);
     $dmarc->spf({ domain => $test_dom, scope=>'mfrom', result=>'pass' });
     $dmarc->validate() or diag Dumper($dmarc) and return;
-    is_deeply( $dmarc->result->evaluated, {
+    my $pub = delete $dmarc->result->{published};
+    is_deeply( $dmarc->result, {
         'result' => 'pass',
         'disposition' => 'none',
         'dkim_meta' => {
@@ -68,7 +68,8 @@ sub setup_dmarc_result {
         'dkim_align' => 'strict',
         'spf_align' => 'strict',
         },
-        "evaluated, pass, strict, $test_dom")
+        "result, pass, strict, $test_dom")
         or diag Dumper($dmarc->result);
+    return $dmarc->result->published( $pub );
 };
 

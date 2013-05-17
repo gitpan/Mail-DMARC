@@ -30,7 +30,7 @@ dmarc_lookup - look up DMARC policy for a domain
 
 =head1 VERSION
 
-version 0.20130515
+version 0.20130517
 
 =head1 AUTHORS
 

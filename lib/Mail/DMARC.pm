@@ -1,6 +1,6 @@
 package Mail::DMARC;
 {
-  $Mail::DMARC::VERSION = '0.20130515';
+  $Mail::DMARC::VERSION = '0.20130517';
 }
 use strict;
 use warnings;
@@ -147,7 +147,7 @@ Mail::DMARC - Perl implementation of DMARC
 
 =head1 VERSION
 
-version 0.20130515
+version 0.20130517
 
 =head1 SYNOPSIS
 
@@ -165,23 +165,41 @@ Determine if:
 
 Results of DMARC processing are stored in a L<Mail::DMARC::Result> object.
 
+=head1 HOW TO USE
+
+ my $dmarc = Mail::DMARC->new( "see L<new|#new> for required args");
+ my $result = $dmarc->verify();
+
+ if ( $result->result eq 'pass' ) {
+     ...continue normal processing...
+     return;
+ };
+
+ # any result that did not pass is a fail. Now for disposition
+
+ if ( $result->evalated->disposition eq 'reject' ) {
+     ...treat the sender to a 550 ...
+ };
+ if ( $result->evalated->disposition eq 'quarantine' ) {
+     ...assign a bunch of spam points...
+ };
+ if ( $result->evalated->disposition eq 'none' ) {
+     ...continue normal processing...
+ };
+
+There's a lot of information available in the $result object. See L<Mail::DMARC::Result> page for complete details.
+
 =head1 CLASSES
 
 L<Mail::DMARC> - A perl implementation of the DMARC draft
 
-L<Mail::DMARC::Policy> - a DMARC record in object format
+L<Mail::DMARC::Policy> - a DMARC policy, as published or retrieved via DNS
 
-L<Mail::DMARC::PurePerl> - a DMARC implementation
+L<Mail::DMARC::PurePerl> - a perl DMARC implementation
 
-=over 4
+L<Mail::DMARC::Result> - results of DMARC processing
 
-=item L<Mail::DMARC::Result>
-
-=item L<Mail::DMARC::Result::Evaluated>
-
-=back
-
-L<Mail::DMARC::Report> - the R in DMARC
+L<Mail::DMARC::Report> - Reporting: the R in DMARC
 
 =over 4
 
@@ -196,30 +214,6 @@ L<Mail::DMARC::Report::View> - CLI and (eventually) CGI methods for report viewi
 =back
 
 L<Mail::DMARC::libopendmarc|http://search.cpan.org/~shari/Mail-DMARC-opendmarc> - an XS implementation using libopendmarc
-
-=head1 HOW TO USE
-
-    my $dmarc = Mail::DMARC->new( "see L<new|#new> for required args");
-    my $result = $dmarc->verify();
-
-    if ( $result->evaluated->result eq 'pass' ) {
-        ...continue normal processing...
-        return;
-    };
-
-    # any result that did not pass is a fail. Now for disposition
-
-    if ( $result->evalated->disposition eq 'reject' ) {
-        ...treat the sender to a 550 ...
-    };
-    if ( $result->evalated->disposition eq 'quarantine' ) {
-        ...assign a bunch of spam points...
-    };
-    if ( $result->evalated->disposition eq 'none' ) {
-        ...continue normal processing...
-    };
-
-There's a lot more information available in the $result object. See L<Mail::DMARC::Result> page for complete details.
 
 =head1 METHODS
 
@@ -290,7 +284,7 @@ You can instead pass in the entire From: header with header_from_raw.
 
 =head2 header_from_raw
 
-This retrieves the header_from domain by extracing it from a raw From field/header.  The domain portion is extracted by Mail::DMARC::PurePerl::get_dom_from_header, which is fast, generally effective, but also rather crude. It does have limits, so read the description.
+Retrieve the header_from domain by parsing it from a raw From field/header. The domain portion is extracted by L<get_dom_from_header|Mail::DMARC::PurePerl#get_dom_from_header>, which is fast, generally effective, but also rather crude. It has limits, so read the description.
 
 =head2 dkim
 

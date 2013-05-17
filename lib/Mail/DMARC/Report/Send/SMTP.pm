@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Send::SMTP;
 {
-  $Mail::DMARC::Report::Send::SMTP::VERSION = '0.20130515';
+  $Mail::DMARC::Report::Send::SMTP::VERSION = '0.20130517';
 }
 use strict;
 use warnings;
@@ -53,6 +53,7 @@ sub via_net_smtp {
     my $hosts = $self->get_smtp_hosts($to_domain);
     my @try_mx = map { $_->{addr} }
         sort { $a->{pref} <=> $b->{pref} } @$hosts;
+    push @try_mx, $to_domain;  # might be 0 MX records
 
     my $c = $self->config->{smtp};
     my $hostname = $c->{hostname};
@@ -65,7 +66,7 @@ sub via_net_smtp {
     my $smtp = Net::SMTPS->new(
             [ @try_mx ],
             Timeout => 10,
-            Port    => $to_domain eq 'theartfarm.com' ? 587 : 25,
+            Port    => 25,
             Hello   => $hostname,
             doSSL   => 'starttls',
             SSL_verify_mode => 'SSL_VERIFY_NONE',
@@ -161,6 +162,7 @@ sub _assemble_message {
     my ($self, $args) = @_;
 
     my $filename = $self->get_filename($args);
+    my $cf = (time > 1372662000) ? 'gzip' : 'zip'; # gz after 7/1/13
     my @parts = Email::MIME->create(
                 attributes => {
                     content_type => "text/plain",
@@ -173,7 +175,7 @@ sub _assemble_message {
     push @parts, Email::MIME->create(
                 attributes => {
                     filename     => $filename,
-                    content_type => "application/gzip",
+                    content_type => "application/$cf",
                     encoding     => "base64",
                     name         => $filename,
                 },
@@ -247,7 +249,7 @@ Mail::DMARC::Report::Send::SMTP - send DMARC reports via SMTP
 
 =head1 VERSION
 
-version 0.20130515
+version 0.20130517
 
 =head2 SUBJECT FIELD
 
