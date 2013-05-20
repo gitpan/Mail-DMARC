@@ -189,13 +189,13 @@ sub install_app_linux {
 sub install_module {
     my ($module, $info, $version) = @_;
 
-    return install_module_darwin($module, $info, $version)
+    install_module_darwin($module, $info, $version)
         if lc($OSNAME) eq 'darwin';
 
-    return install_module_freebsd($module, $info, $version)
+    install_module_freebsd($module, $info, $version)
         if lc($OSNAME) eq 'freebsd';
 
-    return install_module_linux( $module, $info, $version)
+    install_module_linux( $module, $info, $version)
         if lc($OSNAME) eq 'linux';
 
     eval "require $module"; ## no critic (Eval)
@@ -399,7 +399,7 @@ install_deps.pl - install dependencies with package manager or CPAN
 
 =head1 VERSION
 
-version 0.20130517
+version 0.20130520
 
 =head1 AUTHORS
 

@@ -1,6 +1,6 @@
 package Mail::DMARC::Report;
 {
-  $Mail::DMARC::Report::VERSION = '0.20130517';
+  $Mail::DMARC::Report::VERSION = '0.20130520';
 }
 use strict;
 use warnings;
@@ -15,6 +15,36 @@ require Mail::DMARC::Report::Store;
 require Mail::DMARC::Report::Receive;
 require Mail::DMARC::Report::URI;
 require Mail::DMARC::Report::View;
+
+sub init {
+    my $self = shift;
+    delete $_->{_record};
+    return;
+};
+
+sub meta {
+    my $self = shift;
+    return $self->{_report}{meta} if ref $self->{_report}{meta};
+    return $self->{_report}{meta} = Mail::DMARC::Report::metadata->new();
+};
+
+sub policy_published {
+    my ($self, $policy) = @_;
+    croak "not a policy object!" if 'Mail::DMARC::Policy' ne ref $policy;
+    return $self->{_report}{policy_published} = $policy;
+};
+
+sub add_record {
+    my ($self, $rrecord) = @_;
+    croak "invalid record format!" if 'HASH' ne ref $rrecord;
+    return push @{ $self->{_report}{record}}, $rrecord;
+};
+
+sub dump_report {
+    my $self = shift;
+    carp Dumper($self->{_report});
+    return;
+};
 
 sub dmarc {
     my $self = shift;
@@ -58,7 +88,11 @@ sub save_receiver {
 
 sub save_author {
     my $self = shift;
-    return $self->store->backend->save_author(@_);
+    return $self->store->backend->save_author(
+            $self->{_report}{meta},
+            $self->{_report}{policy_published},
+            $self->{_report}{record},
+            );
 };
 
 sub assemble_xml {
@@ -198,6 +232,60 @@ sub get_report_metadata_as_xml {
 1;
 # ABSTRACT: A DMARC report object
 
+package Mail::DMARC::Report::metadata;
+{
+  $Mail::DMARC::Report::metadata::VERSION = '0.20130520';
+}
+use strict;
+use warnings;
+
+use parent 'Mail::DMARC::Base';
+
+sub org_name {
+    return $_[0]->{org_name} if 1 == scalar @_;
+    return $_[0]->{org_name} = $_[1];
+};
+sub email {
+    return $_[0]->{email} if 1 == scalar @_;
+    return $_[0]->{email} = $_[1];
+};
+sub extra_contact_info {
+    return $_[0]->{extra_contact_info} if 1 == scalar @_;
+    return $_[0]->{extra_contact_info} = $_[1];
+};
+sub report_id {
+    return $_[0]->{report_id} if 1 == scalar @_;
+    return $_[0]->{report_id} = $_[1];
+};
+sub date_range {
+    return $_[0]->{date_range} if 1 == scalar @_;
+#   croak "invalid date_range" if ('HASH' ne ref $_->[1]);
+    return $_[0]->{date_range} = $_[1];
+};
+sub begin {
+    return $_[0]->{date_range}{begin} if 1 == scalar @_;
+    return $_[0]->{date_range}{begin} = $_[1];
+};
+sub end {
+    return $_[0]->{date_range}{end} if 1 == scalar @_;
+    return $_[0]->{date_range}{end} = $_[1];
+};
+sub error {
+    return $_[0]->{error} if 1 == scalar @_;
+    return push @{ $_[0]->{error}}, $_[1];
+};
+sub domain {
+    return $_[0]->{domain} if 1 == scalar @_;
+    return $_[0]->{domain} = $_[1];
+};
+sub uuid {
+    return $_[0]->{uuid} if 1 == scalar @_;
+    return $_[0]->{uuid} = $_[1];
+};
+
+1;
+
+
 
 =pod
 
@@ -207,7 +295,7 @@ Mail::DMARC::Report - A DMARC report object
 
 =head1 VERSION
 
-version 0.20130517
+version 0.20130520
 
 =head1 DESCRIPTION
 

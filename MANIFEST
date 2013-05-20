@@ -8,6 +8,7 @@ Makefile.PL
 README
 README.md
 bin/dmarc_lookup
+bin/dmarc_receive
 bin/dmarc_report
 bin/install_deps.pl
 dist.ini

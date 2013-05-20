@@ -1,6 +1,6 @@
 package Mail::DMARC::Base;
 {
-  $Mail::DMARC::Base::VERSION = '0.20130517';
+  $Mail::DMARC::Base::VERSION = '0.20130520';
 }
 use strict;
 use warnings;
@@ -11,7 +11,7 @@ use File::ShareDir;
 use IO::File;
 use Net::DNS::Resolver;
 use Net::IP;
-use Regexp::Common qw /net/;
+use Regexp::Common 2013031301 qw /net/;
 use Socket;
 use Socket6 qw//; # don't export symbols
 
@@ -167,7 +167,7 @@ Mail::DMARC::Base - DMARC utility functions
 
 =head1 VERSION
 
-version 0.20130517
+version 0.20130520
 
 =head1 METHODS
 

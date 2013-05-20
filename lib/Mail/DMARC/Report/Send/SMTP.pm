@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Send::SMTP;
 {
-  $Mail::DMARC::Report::Send::SMTP::VERSION = '0.20130517';
+  $Mail::DMARC::Report::Send::SMTP::VERSION = '0.20130520';
 }
 use strict;
 use warnings;
@@ -104,8 +104,7 @@ sub via_net_smtp {
 
 sub get_domain_mx {
     my ($self, $domain) = @_;
-    my $res = $self->get_resolver();
-    my $query = $res->query($domain, 'MX') or return [];
+    my $query = $self->get_resolver->send($domain, 'MX') or return [];
     my @mx;
     for my $rr ($query->answer) {
         next if $rr->type ne 'MX';
@@ -249,7 +248,7 @@ Mail::DMARC::Report::Send::SMTP - send DMARC reports via SMTP
 
 =head1 VERSION
 
-version 0.20130517
+version 0.20130520
 
 =head2 SUBJECT FIELD
 

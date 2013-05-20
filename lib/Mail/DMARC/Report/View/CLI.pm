@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::View::CLI;
 {
-  $Mail::DMARC::Report::View::CLI::VERSION = '0.20130517';
+  $Mail::DMARC::Report::View::CLI::VERSION = '0.20130520';
 }
 use strict;
 use warnings;
@@ -52,7 +52,7 @@ Mail::DMARC::Report::View::CLI - view locally stored DMARC reports
 
 =head1 VERSION
 
-version 0.20130517
+version 0.20130520
 
 =head1 AUTHORS
 

@@ -1,6 +1,6 @@
 package Mail::DMARC::Policy;
 {
-  $Mail::DMARC::Policy::VERSION = '0.20130517';
+  $Mail::DMARC::Policy::VERSION = '0.20130520';
 }
 use strict;
 use warnings;
@@ -60,7 +60,7 @@ sub p {
 
 sub sp {
     return $_[0]->{sp} if 1 == scalar @_;
-    croak "invalid sp" if ! $_[0]->is_valid_p($_[1]);
+    croak "invalid sp ($_[1])" if ! $_[0]->is_valid_p($_[1]);
     return $_[0]->{sp} = $_[1];
 };
 
@@ -103,7 +103,7 @@ sub rf {
 };
 sub ri {
     return $_[0]->{ri} if 1 == scalar @_;
-    croak "not numeric!" if $_[1] =~ /\D/;
+    croak "not numeric ($_[1])!" if $_[1] =~ /\D/;
     croak "not an integer!" if $_[1] != int $_[1];
     croak "out of range" if ($_[1] < 0 || $_[1] > 4294967295);
     return $_[0]->{ri} = $_[1];
@@ -111,10 +111,15 @@ sub ri {
 
 sub pct {
     return $_[0]->{pct} if 1 == scalar @_;
-    croak "not numeric!" if $_[1] =~ /\D/;
+    croak "not numeric ($_[1])!" if $_[1] =~ /\D/;
     croak "not an integer!" if $_[1] != int $_[1];
     croak "out of range" if $_[1] < 0 || $_[1] > 100;
     return $_[0]->{pct} = $_[1];
+};
+
+sub domain {
+    return $_[0]->{domain} if 1 == scalar @_;
+    return $_[0]->{domain} = $_[1];
 };
 
 sub is_valid_rf {
@@ -165,7 +170,7 @@ Mail::DMARC::Policy - a DMARC policy in object format
 
 =head1 VERSION
 
-version 0.20130517
+version 0.20130520
 
 =head1 EXAMPLES
 
@@ -181,6 +186,10 @@ Or in a more perlish fashion:
 
     my $res = Net::DNS::Resolver->new(dnsrch => 0);
     $res->send('_dmarc.example.com', 'TXT');
+
+Or with the provided dmarc_lookup tool:
+
+    dmarc_lookup example.com
 
 =head1 USAGE
 
@@ -200,27 +209,27 @@ Or in a more perlish fashion:
 
 Create a new empty policy:
 
-   my $pol = Mail::DMARC::Policy->new;
+ my $pol = Mail::DMARC::Policy->new;
 
 Create a new policy from named arguments:
 
-   my $pol = Mail::DMARC::Policy->new(
-            v   => 'DMARC1',
-            p   => 'none',
-            pct => 50,
-           );
+ my $pol = Mail::DMARC::Policy->new(
+         v   => 'DMARC1',
+         p   => 'none',
+         pct => 50,
+         );
 
 Create a new policy from a DMARC DNS resource record:
 
-   my $pol = Mail::DMARC::Policy->new(
-            'v=DMARC1; p=reject; rua=mailto:dmarc@example.com; pct=50;'
-           );
+ my $pol = Mail::DMARC::Policy->new(
+         'v=DMARC1; p=reject; rua=mailto:dmarc@example.com; pct=50;'
+         );
 
 If a policy is passed in (the latter two examples), the resulting policy object will be an exact representation of the record as returned from DNS.
 
 =head1 apply_defaults
 
-Several of the DMARC tags (adkim,aspf,fo,ri,rf) have default values when not specified in the published DNS record. Calling this method will apply those defaults to the DMARC tags that were not specified in the DNS record. The resulting DMARC::Policy object will be a perfect representation of the DMARC policy that is/was applied.
+Several of the DMARC tags (adkim,aspf,fo,ri,rf) have default values when not specified in the published DNS record. Calling I<apply_defaults> will apply those default values to the DMARC tags that were not specified in the DNS record. The resulting L<Policy|Mail::DMARC::Policy> object will be a perfect representation of the DMARC policy that is/was applied.
 
 =head1 parse
 

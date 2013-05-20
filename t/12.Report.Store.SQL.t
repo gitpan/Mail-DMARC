@@ -5,7 +5,8 @@ use Data::Dumper;
 use Test::More;
 
 use lib 'lib';
-use Mail::DMARC::Policy;
+require Mail::DMARC::Report;
+require Mail::DMARC::Policy;
 
 eval "use DBD::SQLite 1.31";
 if ( $@ ) {
@@ -42,16 +43,21 @@ exit;
 
 sub test_insert_author_report {
     my %meta = (
-            id       => time,
-            domain   => 'test.com',
-            org_name => 'Test Company',
-            begin    => time,
-            end      => time + 10,
+            report_id => time,
+            domain    => 'test.com',
+            org_name  => 'Test Company',
+            email     => 'dmarc-reporter@example.com',
+            begin     => time,
+            end       => time + 10,
             );
+    my $report = Mail::DMARC::Report->new();
+    foreach ( keys %meta) {
+        ok( $report->meta->$_($meta{$_}), "meta, $_" );
+    };
     my $policy = Mail::DMARC::Policy->new("v=DMARC1; p=reject");
     $policy->rua( 'mailto:' . $sql->config->{organization}{email} );
     $policy->{domain} = 'recip.example.com';
-    ok( $sql->insert_author_report( \%meta, $policy ), 'insert_author_report');
+    ok( $sql->insert_author_report( $report->meta, $policy ), 'insert_author_report');
 };
 
 sub test_insert_rr_reason {
@@ -135,10 +141,10 @@ sub test_ip_store_and_fetch {
             [ 1, $ipbin, 'none','pass','pass','tnpi.net' ] )
                 or die "failed to insert?";
 
-        my $r_ref = $sql->query("SELECT id,source_ip FROM report_record WHERE id=?", [$report_id])->[0];
+        my $r_ref = $sql->query("SELECT id,source_ip FROM report_record WHERE id=?", [$report_id]);
         compare_any_inet_round_trip(
                 $ip,
-                $sql->any_inet_ntop($r_ref->{source_ip}),
+                $sql->any_inet_ntop($r_ref->[0]{source_ip}),
                 );
     };
 };
@@ -155,18 +161,18 @@ sub test_query_insert {
         [ 0,0,0, $start, $end] );
     ok( $report_id, "query_insert, report, $report_id");
 
-    return unless $ENV{RELEASE_TESTING}; # these tests are noisy
-
 # negative tests
-    $report_id = $sql->query(
+    eval { $report_id = $sql->query(
         "INSERT INTO reporting (domain, begin, end) VALUES (?,?,?)",
-        [ $test_domain, $start, $end] );
-    ok( ! $report_id, "query_insert, report, neg");
+        [ $test_domain, $start, $end] ); };
+    chomp $@;
+    ok( $@, "query_insert, report, neg: $@");
 
-    $report_id = $sql->query(
+    eval { $report_id = $sql->query(
         "INSERT INTO report (domin, begin, end) VALUES (?,?,?)",
-        [ 'a' x 257, 'yellow', $end] );
-    ok( ! $report_id, "query_insert, report, neg") or diag Dumper($report_id);
+        [ 'a' x 257, 'yellow', $end] ); };
+    chomp $@;
+    ok( $@, "query_insert, report, neg: $@") or diag Dumper($report_id);
 }
 
 sub test_query_replace {
@@ -179,6 +185,11 @@ sub test_query_replace {
             [ $s->{id}, $test_domain, $start, $end] ),
                 "query_replace");
     };
+
+# negative
+    eval { $sql->query( "REPLACE INTO rep0rt (id,domain, begin, end) VALUES (?,?,?,?)", [ 1,1,1,1 ]) };
+    chomp $@;
+    ok ( $@, "replace, negative, $@" );
 }
 
 sub test_query_update {
@@ -189,8 +200,8 @@ sub test_query_update {
         ok( $r, "query_update, $r");
 
 # negative test
-        ok( ! $sql->query( "UPDATE report SET ed=? WHERE id=?", [ time, $v->{id} ] ),
-              "query_update, neg");
+        eval { $sql->query( "UPDATE report SET ed=? WHERE id=?", [ time, $v->{id} ] ) };
+        ok( $@, "query_update, neg");
     };
 }
 
@@ -200,11 +211,24 @@ sub test_query_delete {
         my $r = $sql->query( "DELETE FROM report WHERE id=?");
         ok( $r, "query_delete");
     };
+
+# neg
+    eval { $sql->query("DELETE FROM repor WHERE id=?"); };
+    chomp $@;
+    ok( $@, "delete, negative, $@" );
 }
 
 sub test_query_any {
-    my $r = $sql->query("SELECT id FROM report LIMIT 1");
-    ok( $r, "query");
+
+    foreach my $table ( qw/ report author domain report_record / ) {
+        my $r = $sql->query("SELECT id FROM $table LIMIT 1");
+        ok( $r, "query, select, $table");
+    };
+
+# negative
+    eval { $sql->query("SELECT id FROM rep0rt LIMIT 1") };
+    chomp $@;
+    ok( $@, "query, select, negative, $@" );
 }
 
 sub test_db_connect {

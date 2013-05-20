@@ -1,6 +1,6 @@
 package Mail::DMARC::PurePerl;
 {
-  $Mail::DMARC::PurePerl::VERSION = '0.20130517';
+  $Mail::DMARC::PurePerl::VERSION = '0.20130520';
 }
 use strict;
 use warnings;
@@ -103,7 +103,7 @@ sub discover_policy {
 
 #   $e->dmarc_rr($matches->[0]);  # why save this?
     my $policy = $self->policy( $matches->[0] ) or return;
-    $policy->{domain} = $from_dom;
+    $policy->domain( $from_dom );
     $self->result->published( $policy );
 
     # 9.6 If a retrieved policy record does not contain a valid "p" tag, or
@@ -344,8 +344,7 @@ sub fetch_dmarc_record {
     #     the message. A possibly empty set of records is returned.
     $self->is_subdomain( defined $org_dom ? 0 : 1 );
     my @matches = ();
-    my $res = $self->get_resolver();
-    my $query = $res->send("_dmarc.$zone", 'TXT') or return \@matches;
+    my $query = $self->get_resolver->send("_dmarc.$zone", 'TXT') or return \@matches;
     for my $rr ($query->answer) {
         next if $rr->type ne 'TXT';
 
@@ -412,7 +411,7 @@ sub get_dom_from_header {
 
 sub external_report {
     my ($self, $uri) = @_;
-    my $dmarc_dom = $self->result->published->{domain}
+    my $dmarc_dom = $self->result->published->domain
         or croak "published policy not tagged!";
 
     if ( 'mailto' eq $uri->scheme ) {
@@ -434,7 +433,7 @@ sub verify_external_reporting {
 
 #  1.  Extract the host portion of the authority component of the URI.
 #      Call this the "destination host".
-    my $dmarc_dom = $self->result->published->{domain}
+    my $dmarc_dom = $self->result->published->domain
         or croak "published policy not tagged!";
 
     my $dest_email = $uri_ref->{uri}->path or croak("invalid URI");
@@ -446,7 +445,7 @@ sub verify_external_reporting {
     my $dest = join '.', $dmarc_dom, '_report._dmarc', $dest_host;
 
 #  4.  Query the DNS for a TXT record at the constructed name.
-    my $query = $self->get_resolver->query($dest, 'TXT') or return;
+    my $query = $self->get_resolver->send($dest, 'TXT') or return;
 
 #  5.  For each record, parse the result...same overall format:
 #      "v=DMARC1" tag is mandatory and MUST appear first in the list.
@@ -480,18 +479,18 @@ sub verify_external_reporting {
 }
 
 1;
-# ABSTRACT: a perl implementation of DMARC
+# ABSTRACT: Pure Perl implementation of DMARC
 
 
 =pod
 
 =head1 NAME
 
-Mail::DMARC::PurePerl - a perl implementation of DMARC
+Mail::DMARC::PurePerl - Pure Perl implementation of DMARC
 
 =head1 VERSION
 
-version 0.20130517
+version 0.20130520
 
 =head1 METHODS
 

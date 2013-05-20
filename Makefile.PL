@@ -21,6 +21,7 @@ my %WriteMakefileArgs = (
   "DISTNAME" => "Mail-DMARC",
   "EXE_FILES" => [
     "bin/dmarc_lookup",
+    "bin/dmarc_receive",
     "bin/dmarc_report",
     "bin/install_deps.pl"
   ],
@@ -34,9 +35,11 @@ my %WriteMakefileArgs = (
     "DBIx::Simple" => 0,
     "Data::Dumper" => 0,
     "Email::MIME" => 0,
+    "Email::Simple" => 0,
     "Encode" => 0,
     "English" => 0,
     "File::ShareDir" => 0,
+    "Getopt::Long" => 0,
     "IO::Compress::Gzip" => 0,
     "IO::Compress::Zip" => 0,
     "IO::File" => 0,
@@ -52,7 +55,7 @@ my %WriteMakefileArgs = (
     "Socket6" => "0.23",
     "Sys::Hostname" => 0,
     "URI" => 0,
-    "XML::LibXML::Reader" => 0,
+    "XML::LibXML" => 0,
     "parent" => 0,
     "strict" => 0,
     "warnings" => 0
@@ -60,7 +63,7 @@ my %WriteMakefileArgs = (
   "TEST_REQUIRES" => {
     "Test::More" => 0
   },
-  "VERSION" => "0.20130517",
+  "VERSION" => "0.20130520",
   "test" => {
     "TESTS" => "t/*.t"
   }
