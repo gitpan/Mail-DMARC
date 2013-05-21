@@ -4,10 +4,12 @@ author:
   - 'Matt Simerson <msimerson@cpan.org>'
   - 'Davide Migliavacca <shari@cpan.org>'
 build_requires:
+  Module::Build: 0.3601
   Test::More: 0
 configure_requires:
   ExtUtils::MakeMaker: 6.30
   File::ShareDir::Install: 0.03
+  Module::Build: 0.3601
 dynamic_config: 0
 generated_by: 'Dist::Zilla version 4.300034, CPAN::Meta::Converter version 2.120921'
 license: perl
@@ -15,11 +17,19 @@ meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
 name: Mail-DMARC
+recommends:
+  DBD::SQLite: 1.31
+  DBIx::Simple: 0
+  Email::MIME: 0
+  IO::Compress::Gzip: 0
+  IO::Compress::Zip: 0
+  Net::IMAP::Simple: 0
+  Net::SMTPS: 0
+  XML::LibXML: 0
 requires:
   CPAN: 0
   Carp: 0
   Config::Tiny: 0
-  DBD::SQLite: 1.31
   DBIx::Simple: 0
   Data::Dumper: 0
   Email::MIME: 0
@@ -38,6 +48,7 @@ requires:
   Net::IP: 0
   Net::SMTPS: 0
   POSIX: 0
+  Pod::Usage: 0
   Regexp::Common: 2013031301
   Socket: 0
   Socket6: 0.23
@@ -45,6 +56,11 @@ requires:
   URI: 0
   XML::LibXML: 0
   parent: 0
+  perl: 5.008
   strict: 0
   warnings: 0
-version: 0.20130520
+resources:
+  bugtracker: https://github.com/msimerson/mail-dmarc/issues
+  homepage: https://github.com/msimerson/mail-dmarc/wiki
+  repository: git://github.com/msimerson/mail-dmarc.git
+version: 0.20130521

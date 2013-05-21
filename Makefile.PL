@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 
-
+use 5.008;
 
 use ExtUtils::MakeMaker 6.30;
 
@@ -13,10 +13,13 @@ install_share dist => "share";
 my %WriteMakefileArgs = (
   "ABSTRACT" => "Perl implementation of DMARC",
   "AUTHOR" => "Matt Simerson <msimerson\@cpan.org>, Davide Migliavacca <shari\@cpan.org>",
-  "BUILD_REQUIRES" => {},
+  "BUILD_REQUIRES" => {
+    "Module::Build" => "0.3601"
+  },
   "CONFIGURE_REQUIRES" => {
     "ExtUtils::MakeMaker" => "6.30",
-    "File::ShareDir::Install" => "0.03"
+    "File::ShareDir::Install" => "0.03",
+    "Module::Build" => "0.3601"
   },
   "DISTNAME" => "Mail-DMARC",
   "EXE_FILES" => [
@@ -31,7 +34,6 @@ my %WriteMakefileArgs = (
     "CPAN" => 0,
     "Carp" => 0,
     "Config::Tiny" => 0,
-    "DBD::SQLite" => "1.31",
     "DBIx::Simple" => 0,
     "Data::Dumper" => 0,
     "Email::MIME" => 0,
@@ -50,6 +52,7 @@ my %WriteMakefileArgs = (
     "Net::IP" => 0,
     "Net::SMTPS" => 0,
     "POSIX" => 0,
+    "Pod::Usage" => 0,
     "Regexp::Common" => "2013031301",
     "Socket" => 0,
     "Socket6" => "0.23",
@@ -63,7 +66,7 @@ my %WriteMakefileArgs = (
   "TEST_REQUIRES" => {
     "Test::More" => 0
   },
-  "VERSION" => "0.20130520",
+  "VERSION" => "0.20130521",
   "test" => {
     "TESTS" => "t/*.t"
   }

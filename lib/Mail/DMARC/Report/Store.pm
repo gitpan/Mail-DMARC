@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Store;
 {
-  $Mail::DMARC::Report::Store::VERSION = '0.20130520';
+  $Mail::DMARC::Report::Store::VERSION = '0.20130521';
 }
 use strict;
 use warnings;
@@ -12,30 +12,31 @@ use parent 'Mail::DMARC::Base';
 sub delete_report {
     my $self = shift;
     return $self->backend->delete_report(@_);
-};
+}
 
 sub retrieve {
     my $self = shift;
     return $self->backend->retrieve(@_);
-};
+}
 
 sub backend {
-    my $self = shift;
+    my $self    = shift;
     my $backend = $self->config->{report_store}{backend};
 
-    croak "no backend defined?!" if ! $backend;
+    croak "no backend defined?!" if !$backend;
 
     return $self->{$backend} if ref $self->{$backend};
     my $module = "Mail::DMARC::Report::Store::$backend";
-    eval "use $module";  ## no critic (Eval)
-    if ( $@ ) {
+    eval "use $module";    ## no critic (Eval)
+    if ($@) {
         croak "Unable to load backend $backend: $@\n";
-    };
+    }
 
     return $self->{$backend} = $module->new;
-};
+}
 
 1;
+
 # ABSTRACT: persistent storage broker for DMARC reports
 
 
@@ -47,7 +48,7 @@ Mail::DMARC::Report::Store - persistent storage broker for DMARC reports
 
 =head1 VERSION
 
-version 0.20130520
+version 0.20130521
 
 =head1 DESCRIPTION
 

@@ -1,4 +1,13 @@
 
+0.20130521 2013-05-21 America/Los_Angeles
+
+ - check for report_record existence before insertion
+ - SQL: added report_record.count column
+ - subclassed aggregreate reports into Report::Aggregate
+   - consolidates two agg. rep. generation methods to one
+ - SQL: added table report_error
+ - updated SQLite schema with native column types
+
 0.20130520 2013-05-19 America/Los_Angeles
 
  - added bin/dmarc_receive (via IMAP, mbox, or message file)

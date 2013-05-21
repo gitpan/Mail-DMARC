@@ -1,3 +1,4 @@
+Build.PL
 Changes
 DEVELOP.md
 FAQ.md
@@ -7,6 +8,7 @@ META.yml
 Makefile.PL
 README
 README.md
+README.mkdn
 bin/dmarc_lookup
 bin/dmarc_receive
 bin/dmarc_report
@@ -17,6 +19,7 @@ lib/Mail/DMARC/Base.pm
 lib/Mail/DMARC/Policy.pm
 lib/Mail/DMARC/PurePerl.pm
 lib/Mail/DMARC/Report.pm
+lib/Mail/DMARC/Report/Aggregate.pm
 lib/Mail/DMARC/Report/Receive.pm
 lib/Mail/DMARC/Report/Send.pm
 lib/Mail/DMARC/Report/Send/HTTP.pm
@@ -42,6 +45,8 @@ t/06.Result.t
 t/10.Report.t
 t/11.Report.Store.t
 t/12.Report.Store.SQL.t
+t/13.Report.Aggregate.t
+t/14.Report.Aggregate.Metadata.t
 t/15.Report.View.CLI.t
 t/16.Report.View.HTTP.t
 t/20.Report.URI.t
@@ -52,4 +57,5 @@ t/25.Report.Receive.t
 t/author-critic.t
 t/mail-dmarc.ini
 t/perlcritic.rc
+t/release-pod-coverage.t
 t/release-pod-syntax.t

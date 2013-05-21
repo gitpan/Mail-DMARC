@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::View::HTTP;
 {
-  $Mail::DMARC::Report::View::HTTP::VERSION = '0.20130520';
+  $Mail::DMARC::Report::View::HTTP::VERSION = '0.20130521';
 }
 use strict;
 use warnings;
@@ -10,9 +10,10 @@ use parent 'Mail::DMARC::Report';
 sub new {
     my $class = shift;
     return bless {}, $class;
-};
+}
 
 1;
+
 # ABSTRACT: view locally stored DMARC reports
 
 
@@ -24,7 +25,7 @@ Mail::DMARC::Report::View::HTTP - view locally stored DMARC reports
 
 =head1 VERSION
 
-version 0.20130520
+version 0.20130521
 
 =head1 SYNOPSIS
 
