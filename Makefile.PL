@@ -23,14 +23,17 @@ my %WriteMakefileArgs = (
   },
   "DISTNAME" => "Mail-DMARC",
   "EXE_FILES" => [
+    "bin/dmarc_httpd",
     "bin/dmarc_lookup",
     "bin/dmarc_receive",
-    "bin/dmarc_report",
+    "bin/dmarc_send_reports",
+    "bin/dmarc_view_reports",
     "bin/install_deps.pl"
   ],
   "LICENSE" => "perl",
   "NAME" => "Mail::DMARC",
   "PREREQ_PM" => {
+    "CGI" => 0,
     "CPAN" => 0,
     "Carp" => 0,
     "Config::Tiny" => 0,
@@ -47,6 +50,7 @@ my %WriteMakefileArgs = (
     "IO::File" => 0,
     "IO::Uncompress::Gunzip" => 0,
     "IO::Uncompress::Unzip" => 0,
+    "JSON" => 0,
     "Net::DNS::Resolver" => 0,
     "Net::HTTP" => 0,
     "Net::IP" => 0,
@@ -66,7 +70,7 @@ my %WriteMakefileArgs = (
   "TEST_REQUIRES" => {
     "Test::More" => 0
   },
-  "VERSION" => "0.20130521",
+  "VERSION" => "0.20130524",
   "test" => {
     "TESTS" => "t/*.t"
   }

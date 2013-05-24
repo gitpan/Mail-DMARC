@@ -9,14 +9,14 @@ use lib 'lib';
 use Mail::DMARC::Report;
 my $report = Mail::DMARC::Report->new();
 
-# 1. get list of reports where end < now
-while (defined(my $aggregate = $report->store->retrieve ) ) {
+# 1. get list of reports ready to send
+while (defined(my $aggregate = $report->store->retrieve_todo ) ) {
 
     print $aggregate->metadata->domain . "\n";
     print "rua: " . $aggregate->policy_published->rua . "\n";
     my $xml = $aggregate->as_xml();
-    $report->sendit->send_rua(\$aggregate, \$xml) # deliver via SMTP/HTTP
-        and $report->store->delete_report($aggregate->metadata->report_id);
+#   $report->sendit->send_rua(\$aggregate, \$xml) # deliver via SMTP/HTTP
+#       and $report->store->delete_report($aggregate->metadata->report_id);
     print $xml;
     print "sleeping 5";
     foreach ( 1 .. 5 ) { print '.'; sleep 1; };
@@ -24,19 +24,20 @@ while (defined(my $aggregate = $report->store->retrieve ) ) {
 };
 
 exit;
-# PODNAME: dmarc_report
+# PODNAME: dmarc_send_reports
 # ABSTRACT: send aggregate reports to requestors
 
 __END__
+
 =pod
 
 =head1 NAME
 
-dmarc_report - send aggregate reports to requestors
+dmarc_send_reports - send aggregate reports to requestors
 
 =head1 VERSION
 
-version 0.20130521
+version 0.20130524
 
 =head1 AUTHORS
 
@@ -52,12 +53,15 @@ Davide Migliavacca <shari@cpan.org>
 
 =back
 
+=head1 CONTRIBUTOR
+
+ColocateUSA.net <company@colocateusa.net>
+
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2013 by The Network People, Inc..
+This software is copyright (c) 2013 by ColocateUSA.com.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-

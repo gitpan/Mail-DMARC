@@ -20,21 +20,28 @@ my %module_build_args = (
     "Davide Migliavacca <shari\@cpan.org>"
   ],
   "dist_name" => "Mail-DMARC",
-  "dist_version" => "0.20130521",
+  "dist_version" => "0.20130524",
   "license" => "perl",
   "module_name" => "Mail::DMARC",
   "recommends" => {
+    "CGI" => 0,
     "DBD::SQLite" => "1.31",
     "DBIx::Simple" => 0,
     "Email::MIME" => 0,
+    "Email::Simple" => 0,
     "IO::Compress::Gzip" => 0,
     "IO::Compress::Zip" => 0,
+    "IO::Uncompress::Gunzip" => 0,
+    "IO::Uncompress::Unzip" => 0,
+    "JSON" => 0,
+    "Net::HTTP" => 0,
     "Net::IMAP::Simple" => 0,
     "Net::SMTPS" => 0,
     "XML::LibXML" => 0
   },
   "recursive_test_files" => 1,
   "requires" => {
+    "CGI" => 0,
     "CPAN" => 0,
     "Carp" => 0,
     "Config::Tiny" => 0,
@@ -51,6 +58,7 @@ my %module_build_args = (
     "IO::File" => 0,
     "IO::Uncompress::Gunzip" => 0,
     "IO::Uncompress::Unzip" => 0,
+    "JSON" => 0,
     "Net::DNS::Resolver" => 0,
     "Net::HTTP" => 0,
     "Net::IP" => 0,
@@ -69,9 +77,11 @@ my %module_build_args = (
     "warnings" => 0
   },
   "script_files" => [
+    "bin/dmarc_httpd",
     "bin/dmarc_lookup",
     "bin/dmarc_receive",
-    "bin/dmarc_report",
+    "bin/dmarc_send_reports",
+    "bin/dmarc_view_reports",
     "bin/install_deps.pl"
   ],
   "share_dir" => {

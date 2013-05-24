@@ -37,9 +37,43 @@ test_insert_rr_spf();
 test_insert_rr_dkim();
 test_insert_rr_reason();
 test_get_aggregate_rid();
+test_get_report();
 
 done_testing();
 exit;
+
+sub test_get_report {
+    my $r = $sql->get_report( author => 'The Art Farm' );
+    my $reports = $r->{rows};
+    if ( ! $reports || ! scalar @$reports ) {
+        ok( 1, "skipping author tests" );
+        return;
+    };
+
+    ok( scalar @$reports, "get_report, no limits, " . scalar @$reports );
+    my $limit = 10;
+    $r = $sql->get_report( rows => $limit );
+    $reports = $r->{rows};
+    cmp_ok( scalar @$reports, '==', $limit, "get_report, limit $limit" );
+
+    my @queries = (
+            author      => 'The Art Farm',
+            author      => 'google.com',
+            from_domain => 'theartfarm.com',
+            recipient   => 'google.com',
+            recipient   => 'yahoo.com',
+            rcpt_domain => 'yahoo.com',
+            );
+
+    while ( my $key = shift @queries ) {
+        my $val = shift @queries;
+        $r = $sql->get_report( $key => $val );
+        $reports = $r->{rows};
+        ok( scalar @$reports, "get_report, $key, $val, " . scalar @$reports );
+    };
+    $reports = $sql->get_report( rows => 1, sord => 'desc', sidx => 'rid'  );
+    ok( $reports->{rows}, "get_report, multisearch");
+};
 
 sub test_get_aggregate_rid {
     my %meta = (

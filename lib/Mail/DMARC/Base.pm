@@ -1,6 +1,6 @@
 package Mail::DMARC::Base;
 {
-  $Mail::DMARC::Base::VERSION = '0.20130521';
+  $Mail::DMARC::Base::VERSION = '0.20130524';
 }
 use strict;
 use warnings;
@@ -117,6 +117,22 @@ sub has_dns_rr {
     return $matches;
 }
 
+sub epoch_to_iso {
+    my ($self, $epoch) = @_;
+
+    my @fields = localtime( $epoch );
+
+    my $ss = sprintf( "%02i", $fields[0] );    # seconds
+    my $mn = sprintf( "%02i", $fields[1] );    # minutes
+    my $hh = sprintf( "%02i", $fields[2] );    # hours (24 hour clock)
+
+    my $dd = sprintf( "%02i", $fields[3] );        # day of month
+    my $mm = sprintf( "%02i", $fields[4] + 1 );    # month
+    my $yy = ( $fields[5] + 1900 );                # year
+
+    return "$yy-$mm-$dd" .'T'."$hh:$mn:$ss";
+};
+
 sub get_resolver {
     my $self = shift;
     my $timeout = shift || $self->config->{dns}{timeout} || 5;
@@ -164,7 +180,6 @@ sub slurp {
 
 # ABSTRACT: DMARC utility functions
 
-
 =pod
 
 =head1 NAME
@@ -173,7 +188,7 @@ Mail::DMARC::Base - DMARC utility functions
 
 =head1 VERSION
 
-version 0.20130521
+version 0.20130524
 
 =head1 METHODS
 
@@ -221,15 +236,18 @@ Davide Migliavacca <shari@cpan.org>
 
 =back
 
+=head1 CONTRIBUTOR
+
+ColocateUSA.net <company@colocateusa.net>
+
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2013 by The Network People, Inc..
+This software is copyright (c) 2013 by ColocateUSA.com.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-
 
 __END__
 sub {}

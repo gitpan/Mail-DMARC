@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Receive;
 {
-  $Mail::DMARC::Report::Receive::VERSION = '0.20130521';
+  $Mail::DMARC::Report::Receive::VERSION = '0.20130524';
 }
 use strict;
 use warnings;
@@ -335,7 +335,6 @@ sub verbose {
 
 1;
 
-
 =pod
 
 =head1 NAME
@@ -344,7 +343,7 @@ Mail::DMARC::Report::Receive - process incoming DMARC reports
 
 =head1 VERSION
 
-version 0.20130521
+version 0.20130524
 
 =head1 DESCRIPTION
 
@@ -386,15 +385,18 @@ Davide Migliavacca <shari@cpan.org>
 
 =back
 
+=head1 CONTRIBUTOR
+
+ColocateUSA.net <company@colocateusa.net>
+
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2013 by The Network People, Inc..
+This software is copyright (c) 2013 by ColocateUSA.com.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-
 
 __END__
 # ABSTRACT: process incoming DMARC reports

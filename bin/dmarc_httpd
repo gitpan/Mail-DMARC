@@ -1,0 +1,50 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use lib 'lib';
+use Mail::DMARC::Report::View::HTTP;
+my $http = Mail::DMARC::Report::View::HTTP->new;
+$http->dmarc_httpd;
+
+# ABSTRACT: a web server for viewing DMARC reports
+# PODNAME: dmarc_httpd
+
+__END__
+
+=pod
+
+=head1 NAME
+
+dmarc_httpd - a web server for viewing DMARC reports
+
+=head1 VERSION
+
+version 0.20130524
+
+=head1 AUTHORS
+
+=over 4
+
+=item *
+
+Matt Simerson <msimerson@cpan.org>
+
+=item *
+
+Davide Migliavacca <shari@cpan.org>
+
+=back
+
+=head1 CONTRIBUTOR
+
+ColocateUSA.net <company@colocateusa.net>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2013 by ColocateUSA.com.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut

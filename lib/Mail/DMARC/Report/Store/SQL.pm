@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Store::SQL;
 {
-  $Mail::DMARC::Report::Store::SQL::VERSION = '0.20130521';
+  $Mail::DMARC::Report::Store::SQL::VERSION = '0.20130524';
 }
 use strict;
 use warnings;
@@ -37,17 +37,19 @@ sub save_aggregate {
 
 sub retrieve {
     my ( $self, %args ) = @_;
+    my $reports = $self->query( $self->get_report_query );
+    foreach (@$reports ) {
+        $_->{begin} = join(" ", split(/T/, $self->epoch_to_iso( $_->{begin} )));
+        $_->{end} = join(" ", split(/T/, $self->epoch_to_iso( $_->{end} )));
+    };
+    return $reports;
+}
 
-    my $author_id = $self->{author_id} || $self->query(
-            'SELECT id FROM author WHERE org_name=?',
-            [ $self->config->{organization}{org_name} ]
-            )->[0]{id};
+sub retrieve_todo {
+    my ( $self, %args ) = @_;
 
 #carp "author id: $author_id\n";
-    my $reports = $self->query(
-            'SELECT * FROM report WHERE end < ? AND author_id != ? LIMIT 1',
-            [ time, $author_id ]
-            );
+    my $reports = $self->query( 'SELECT * FROM report r LEFT JOIN report_record rr ON r.id=rr.report_id WHERE rr.count IS NULL AND r.end < ? LIMIT 1', [ time ] );
     return if ! @$reports;
     my $report = $reports->[0];
 carp "report: " . Dumper($report);
@@ -177,6 +179,109 @@ sub get_aggregate_rid {
     $self->insert_published_policy( $rid, $pol );
     return $rid;
 }
+
+sub get_report {
+    my ($self,@args) = @_;
+    croak "invalid parameters" if @args % 2;
+    my %args = @args;
+#warn Dumper(\%args);
+
+    my $query = $self->get_report_query;
+    my @params;
+    my @known = qw/ rid author rcpt_domain from_domain begin end /;
+    my %known = map { $_ => 1 } @known;
+
+# TODO: allow custom search ops?  'searchOper'   => 'eq',
+    if ( $args{searchField} && $known{ $args{searchField} } ) {
+        $query .= " WHERE $args{searchField}=?";
+        push @params, $args{searchString};
+    }
+    else {
+        $query .= " WHERE 1=1";
+    };
+
+    foreach my $known ( @known ) {
+        next if ! defined $args{$known};
+        $query .= " AND $known=?";
+        push @params, $args{$known};
+    };
+    if ( $args{sidx} && $known{$args{sidx}} ) {
+        $query .= " ORDER BY " . $args{sidx};
+        if ( $args{sord} ) {
+            $query .= $args{sord} eq 'desc' ? ' DESC' : ' ASC';
+        };
+    };
+    my $total_recs = $self->dbix->query('SELECT COUNT(*) FROM report')->list;
+    my $total_pages = 0;
+    if ( $args{rows} ) {
+        if ( $args{page} ) {
+            $total_pages = POSIX::ceil($total_recs / $args{rows});
+            my $start = ($args{rows} * $args{page}) - $args{rows};
+            $start = 0 if $start < 0;
+            $query .= " LIMIT ?,?";
+            push @params, $start, $args{rows};
+        }
+        else {
+            $query .= " LIMIT ?";
+            push @params, $args{rows};
+        };
+    };
+
+#   warn "query: $query\n" . join(", ", @params) . "\n";
+    my $reports = $self->query($query, \@params);
+    foreach (@$reports ) {
+        $_->{begin} = join('<br>', split(/T/, $self->epoch_to_iso( $_->{begin} )));
+        $_->{end} = join('<br>', split(/T/, $self->epoch_to_iso( $_->{end} )));
+    };
+# return in the format expected by jgGrid
+    return {
+        cur_page    => $args{page},
+        total_pages => $total_pages,
+        total_rows  => $total_recs,
+        rows        => $reports,
+    };
+};
+
+sub get_report_query {
+    my $self = shift;
+    return <<'EO_REPORTS'
+SELECT r.id AS rid,
+    r.uuid,
+    r.begin AS begin,
+    r.end   AS end,
+    a.org_name AS author,
+    rd.domain  AS rcpt_domain,
+    fd.domain  AS from_domain
+FROM report r
+LEFT JOIN author a ON r.author_id=a.id
+LEFT JOIN domain rd ON r.rcpt_domain_id=rd.id
+LEFT JOIN domain fd ON r.from_domain_id=fd.id
+EO_REPORTS
+;
+};
+
+sub get_row {
+    my ($self,@args) = @_;
+    croak "invalid parameters" if @args % 2;
+    my %args = @args;
+#warn Dumper(\%args);
+    croak "missing report ID (rid)!" if ! defined $args{rid};
+
+    my $query = 'SELECT * FROM report_record WHERE report_id = ?';
+    my @params = $args{rid};
+
+    my $rows = $self->query($query, \@params);
+    foreach ( @$rows ) {
+        $_->{reasons} = $self->query('SELECT type,comment FROM report_record_reason WHERE report_record_id=?', [ $_->{id} ] );
+        $_->{source_ip} = $self->any_inet_ntop( $_->{source_ip} );
+    };
+    return {
+        cur_page    => 1,
+        total_pages => 1,
+        total_rows  => scalar @$rows,
+        rows        => $rows,
+    };
+};
 
 sub row_exists {
     my ($self, $rid, $rec ) = @_;
@@ -334,12 +439,15 @@ sub db_check_err {
     croak $err . $DBI::errstr;
 }
 
-sub dbix { return $_[0]->{dbix}; }
+sub dbix { return $_[0]->{dbix} if $_[0]->{dbix}; return $_[0]->db_connect(); }
 
 sub apply_db_schema {
     my ( $self, $file ) = @_;
     my $setup = $self->slurp($file);
-    foreach ( split /;/, $setup ) { $self->dbix->query($_); }
+    foreach ( split /;/, $setup ) {
+#       warn "$_\n";
+        $self->dbix->query($_);
+    }
     return;
 }
 
@@ -380,6 +488,7 @@ sub query {
 
 sub query_any {
     my ( $self, $query, $err, @params ) = @_;
+#warn "query: $query\n" . join(", ", @params) . "\n";
     my $r = $self->dbix->query( $query, @params )->hashes or croak $err;
     $self->db_check_err($err);
     return $r;
@@ -425,6 +534,7 @@ sub query_delete {
 
 # ABSTRACT: SQL storage for DMARC reports
 
+__END__
 
 =pod
 
@@ -434,7 +544,7 @@ Mail::DMARC::Report::Store::SQL - SQL storage for DMARC reports
 
 =head1 VERSION
 
-version 0.20130521
+version 0.20130524
 
 =head1 DESCRIPTION
 
@@ -460,15 +570,15 @@ Davide Migliavacca <shari@cpan.org>
 
 =back
 
+=head1 CONTRIBUTOR
+
+ColocateUSA.net <company@colocateusa.net>
+
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2013 by The Network People, Inc..
+This software is copyright (c) 2013 by ColocateUSA.com.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-
-
-__END__
-

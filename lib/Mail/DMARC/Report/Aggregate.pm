@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Aggregate;
 {
-  $Mail::DMARC::Report::Aggregate::VERSION = '0.20130521';
+  $Mail::DMARC::Report::Aggregate::VERSION = '0.20130524';
 }
 use strict;
 use warnings;
@@ -160,7 +160,7 @@ sub get_policy_evaluated_as_xml {
 
 package Mail::DMARC::Report::Aggregate::Metadata;
 {
-  $Mail::DMARC::Report::Aggregate::Metadata::VERSION = '0.20130521';
+  $Mail::DMARC::Report::Aggregate::Metadata::VERSION = '0.20130524';
 }
 use strict;
 use warnings;
@@ -243,8 +243,6 @@ sub as_xml {
 
 1;
 
-
-
 =pod
 
 =head1 NAME
@@ -253,7 +251,7 @@ Mail::DMARC::Report::Aggregate - DMARC aggregate report
 
 =head1 VERSION
 
-version 0.20130521
+version 0.20130524
 
 =head1 DESCRIPTION
 
@@ -262,7 +260,7 @@ AGGREGATE REPORTS
 The report SHOULD include the following data:
 
    o  Enough information for the report consumer to re-calculate DMARC
-      disposition based on the published policy, message dispositon, and
+      disposition based on the published policy, message disposition, and
       SPF, DKIM, and identifier alignment results. {R12}
 
    o  Data for each sender subdomain separately from mail from the
@@ -304,15 +302,18 @@ Davide Migliavacca <shari@cpan.org>
 
 =back
 
+=head1 CONTRIBUTOR
+
+ColocateUSA.net <company@colocateusa.net>
+
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2013 by The Network People, Inc..
+This software is copyright (c) 2013 by ColocateUSA.com.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-
 
 __END__
 sub {}

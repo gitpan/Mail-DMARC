@@ -11,22 +11,29 @@ configure_requires:
   File::ShareDir::Install: 0.03
   Module::Build: 0.3601
 dynamic_config: 0
-generated_by: 'Dist::Zilla version 4.300034, CPAN::Meta::Converter version 2.120921'
+generated_by: 'Dist::Zilla version 4.300034, CPAN::Meta::Converter version 2.130880'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
 name: Mail-DMARC
 recommends:
+  CGI: 0
   DBD::SQLite: 1.31
   DBIx::Simple: 0
   Email::MIME: 0
+  Email::Simple: 0
   IO::Compress::Gzip: 0
   IO::Compress::Zip: 0
+  IO::Uncompress::Gunzip: 0
+  IO::Uncompress::Unzip: 0
+  JSON: 0
+  Net::HTTP: 0
   Net::IMAP::Simple: 0
   Net::SMTPS: 0
   XML::LibXML: 0
 requires:
+  CGI: 0
   CPAN: 0
   Carp: 0
   Config::Tiny: 0
@@ -43,6 +50,7 @@ requires:
   IO::File: 0
   IO::Uncompress::Gunzip: 0
   IO::Uncompress::Unzip: 0
+  JSON: 0
   Net::DNS::Resolver: 0
   Net::HTTP: 0
   Net::IP: 0
@@ -63,4 +71,6 @@ resources:
   bugtracker: https://github.com/msimerson/mail-dmarc/issues
   homepage: https://github.com/msimerson/mail-dmarc/wiki
   repository: git://github.com/msimerson/mail-dmarc.git
-version: 0.20130521
+version: 0.20130524
+x_contributors:
+  - 'ColocateUSA.net <company@colocateusa.net>'

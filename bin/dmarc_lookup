@@ -22,6 +22,7 @@ print "no DMARC policy published for $domain\n";
 # ABSTRACT: look up DMARC policy for a domain
 
 __END__
+
 =pod
 
 =head1 NAME
@@ -30,7 +31,7 @@ dmarc_lookup - look up DMARC policy for a domain
 
 =head1 VERSION
 
-version 0.20130521
+version 0.20130524
 
 =head1 AUTHORS
 
@@ -46,12 +47,15 @@ Davide Migliavacca <shari@cpan.org>
 
 =back
 
+=head1 CONTRIBUTOR
+
+ColocateUSA.net <company@colocateusa.net>
+
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2013 by The Network People, Inc..
+This software is copyright (c) 2013 by ColocateUSA.com.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-

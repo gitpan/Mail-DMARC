@@ -1,6 +1,6 @@
 package Mail::DMARC;
 {
-  $Mail::DMARC::VERSION = '0.20130521';
+  $Mail::DMARC::VERSION = '0.20130524';
 }
 use strict;
 use warnings;
@@ -178,7 +178,6 @@ sub save_aggregate {
 
 # ABSTRACT: Perl implementation of DMARC
 
-
 =pod
 
 =head1 NAME
@@ -187,14 +186,15 @@ Mail::DMARC - Perl implementation of DMARC
 
 =head1 VERSION
 
-version 0.20130521
+version 0.20130524
 
 =head1 SYNOPSIS
 
 DMARC: Domain-based Message Authentication, Reporting and Conformance
 
- my $dmarc = Mail::DMARC->new( "see L<new|#new> for required args");
- my $result = $dmarc->validate();
+my $dmarc = Mail::DMARC->new( see L<new|#new> for required args );
+
+my $result = $dmarc->validate();
 
  if ( $result->result eq 'pass' ) {
      ...continue normal processing...
@@ -221,9 +221,11 @@ This module can be used...
 
 =over 4
 
-by MTAs and filtering tools such as SpamAssassin to validate that incoming messages are aligned with the purported senders policies.
+by MTAs and filtering tools like SpamAssassin to validate that incoming messages are aligned with the purported senders policies.
 
-by an email sender that wishes to receive DMARC reports from other mail servers.
+by email senders, to receive DMARC reports from other mail servers and display them via CLI and web interfaces.
+
+by MTA operators to send DMARC reports to DMARC author domains.
 
 =back
 
@@ -284,7 +286,7 @@ Create an empty DMARC object. Then populate it and run the request:
             );
     my $result = $dmarc->validate();
 
-Alternatively, you can pass in all the required parameters in one shot:
+Alternatively, pass in all the required parameters in one shot:
 
     my $dmarc = Mail::DMARC->new(
             source_ip     => '192.0.1.1',
@@ -374,7 +376,7 @@ Additional information about the DKIM result. This is comparable to Mail::DKIM::
 
 =head2 spf
 
-The spf method accepts a hashref or named arguments:
+The spf method accepts a hashref of named arguments:
 
     $dmarc->spf(
         domain => 'example.com',
@@ -406,17 +408,17 @@ The DMARC spec is lengthy and evolving, making correctness a moving target. In c
 
 The effectiveness of DMARC will improve significantly as adoption increases. Proving an implementation of DMARC that SMTP utilities like SpamAssassin, amavis, and qpsmtpd can consume will aid adoption.
 
-The list of dependencies is long because of reporting. If this module is used without reporting, the number of dependencies not included with perl is less than 5.
+The list of dependencies appears long because of reporting. If this module is used without reporting, the number of dependencies not included with perl is about 5. See the [Prereq] versus [Prereq / Recommends] sections in dist.ini.
 
 =head2 Maintainable
 
 Since DMARC is evolving, this implementation aims to be straight forward and dare I say, easy, to alter and extend. The programming style is primarily OO, which carries a small performance penalty but large dividends in maintainability.
 
-When multiple options are available, such as when sending reports via SMTP or HTTP, calls are made to the parent Send class, which brokers the request. When storing reports, calls are made to the Store class, which dispatches to the SQL class. The idea is that if someone desired a data store other than the many provided by perl's DBI class, they could easily implement their own. If you do, please fork it on GitHub and share.
+When multiple options are available, such as when sending reports via SMTP or HTTP, calls should be made to the parent Send class, to broker the request. When storing reports, calls are made to the Store class, which dispatches to the SQL class. The idea is that if someone desired a data store other than the many provided by perl's DBI class, they could easily implement their own. If you do, please fork it on GitHub and share.
 
 =head2 Fast
 
-I have conducted no optimization nor benchmarking and I am not a High Performance Perl expert. If you deploy this in an environment where performance is not sufficient, please do submit patches that are aligned with these goals.
+If you deploy this in an environment where performance is insufficient, please profile the app and submit a report and preferably, patches.
 
 =head1 SEE ALSO
 
@@ -446,15 +448,18 @@ Davide Migliavacca <shari@cpan.org>
 
 =back
 
+=head1 CONTRIBUTOR
+
+ColocateUSA.net <company@colocateusa.net>
+
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2013 by The Network People, Inc..
+This software is copyright (c) 2013 by ColocateUSA.com.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-
 
 __END__
 sub {}  # for vim automatic code folding

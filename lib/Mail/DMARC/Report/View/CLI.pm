@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::View::CLI;
 {
-  $Mail::DMARC::Report::View::CLI::VERSION = '0.20130521';
+  $Mail::DMARC::Report::View::CLI::VERSION = '0.20130524';
 }
 use strict;
 use warnings;
@@ -18,11 +18,8 @@ sub new {
 sub list {
     my $self    = shift;
     my $reports = $self->store->retrieve;
-    foreach my $report (@$reports) {
-        printf "%3s  %30s  %15s %15s\n", @$report{qw/ id domain begin end /};
-        foreach my $row ( @{ $report->{rows} } ) {
-            printf "\t%15s  %6s  %6s \n", @$row{qw/ disposition dkim spf /};
-        }
+    foreach my $report ( reverse @$reports) {
+        printf "%3s  %20s  %20s  %15s\n", @$report{qw/ rid rcpt_domain from_domain begin /};
     }
     return $reports;
 }
@@ -43,6 +40,7 @@ sub store {
 
 # ABSTRACT: view locally stored DMARC reports
 
+__END__
 
 =pod
 
@@ -52,7 +50,7 @@ Mail::DMARC::Report::View::CLI - view locally stored DMARC reports
 
 =head1 VERSION
 
-version 0.20130521
+version 0.20130524
 
 =head1 AUTHORS
 
@@ -68,15 +66,15 @@ Davide Migliavacca <shari@cpan.org>
 
 =back
 
+=head1 CONTRIBUTOR
+
+ColocateUSA.net <company@colocateusa.net>
+
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2013 by The Network People, Inc..
+This software is copyright (c) 2013 by ColocateUSA.com.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-
-
-__END__
-
