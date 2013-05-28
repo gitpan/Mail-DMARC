@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Receive;
 {
-  $Mail::DMARC::Report::Receive::VERSION = '0.20130528';
+  $Mail::DMARC::Report::Receive::VERSION = '1.20130528';
 }
 use strict;
 use warnings;
@@ -27,13 +27,18 @@ sub from_imap {
     my $folder = $self->config->{imap}{folder} or croak "no imap folder conf";
     my $a_done = $self->config->{imap}{a_done};
     my $f_done = $self->config->{imap}{f_done};
+    my $port   = $self->get_imap_port();
 
     no warnings qw(once);                ## no critic (Warn)
-    my $imap = Net::IMAP::Simple->new( $server, Port => 995, use_ssl => 1 )
-        or croak
-        "Unable to connect to IMAP: $Net::IMAP::Simple::SSL::errstr\n";
+    my $imap = Net::IMAP::Simple->new( $server, Port => $port,
+            ($port==993 ? (use_ssl => 1) : ()),
+        )
+        or do {
+            my $err = $port == 143 ? $Net::IMAP::Simple::errstr : $Net::IMAP::Simple::SSL::errstr;
+            croak "Unable to connect to IMAP: $err\n";
+        };
 
-    print "connected to IMAP server $server\n" if $self->verbose;
+    print "connected to IMAP server $server:$port\n" if $self->verbose;
 
     $imap->login( $self->config->{imap}{user}, $self->config->{imap}{pass} )
         or croak "Login failed: " . $imap->errstr . "\n";
@@ -162,6 +167,33 @@ sub from_email_simple {
     return $rep_type;
 }
 
+sub get_imap_port {
+    my $self = shift;
+
+    eval "use IO::Socket::SSL";
+    if ( $@ ) {
+        carp "no SSL, using insecure connection: $!\n";
+        return 143;
+    };
+
+    eval "use Mozilla::CA";
+    if ( ! $@ ) {
+        IO::Socket::SSL::set_ctx_defaults(
+                SSL_verifycn_scheme => 'imap',
+                SSL_verify_mode => 0x02,
+                SSL_ca_file => Mozilla::CA::SSL_ca_file(),
+                );
+        return 993;
+    };
+
+# no CA, disable verification
+    IO::Socket::SSL::set_ctx_defaults(
+        SSL_verifycn_scheme => 'imap',
+        SSL_verify_mode => 0,
+    );
+    return 993;
+};
+
 sub get_submitter_from_filename {
     my ( $self, $filename ) = @_;
     return if $self->report->aggregate->metadata->domain;
@@ -284,6 +316,12 @@ sub do_node_record {
             = $node->findnodes("./identifiers/$i")->string_value;
     }
 
+# this is for reports from junc.org with mis-labeled identifiers
+    if ( ! $row->{identifiers}{header_from} ) {
+        $row->{identifiers}{header_from}
+            = $node->findnodes("./identities/header_from")->string_value;
+    };
+
     $self->report->aggregate->record($row);
     return $row;
 }
@@ -291,22 +329,30 @@ sub do_node_record {
 sub do_node_record_auth {
     my ($self, $row, $node) = @_;
 
-    my %auth = (
-        dkim => [qw/ domain selector result human_result /],
-        spf  => [qw/ domain scope result /],
-    );
+    my @dkim = qw/ domain selector result human_result /,
+    my @spf  = qw/ domain scope result /;
 
-    #auth_results: dkim, spf
-    foreach my $a ( keys %auth ) {
-        foreach my $n ( $node->findnodes("./auth_results/$a") ) {
-            push @{ $$row->{auth_results}{$a} }, {
-                map {
-                    $_ =>
-                        $node->findnodes("./auth_results/$a/$_")->string_value
-                } @{ $auth{$a} }
-            };
-        }
-    }
+    foreach my $n ( $node->findnodes("./auth_results/spf") ) {
+        my %spf = map { $_ => $node->findnodes("./auth_results/spf/$_")->string_value } @spf;
+
+        if ( $spf{scope} && ! $self->is_valid_spf_scope( $spf{scope} ) ) {
+            carp "invalid scope: $spf{scope}, ignoring";
+            delete $spf{scope};
+        };
+# this is for reports from ivenue.com with result=unknown
+        if ( $spf{result} && ! $self->is_valid_spf_result( $spf{result} ) ) {
+            carp "invalid SPF result: $spf{result}, setting to temperror";
+            $spf{result} = 'temperror';
+        };
+        push @{ $$row->{auth_results}{spf} }, \%spf;
+    };
+
+    foreach my $n ( $node->findnodes("./auth_results/dkim") ) {
+        push @{ $$row->{auth_results}{dkim} }, {
+            map { $_ => $node->findnodes("./auth_results/dkim/$_")->string_value } @dkim
+        };
+    };
+
     return;
 };
 
@@ -338,7 +384,7 @@ Mail::DMARC::Report::Receive - process incoming DMARC reports
 
 =head1 VERSION
 
-version 0.20130528
+version 1.20130528
 
 =head1 DESCRIPTION
 

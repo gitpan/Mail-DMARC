@@ -1,6 +1,6 @@
 package Mail::DMARC::PurePerl;
 {
-  $Mail::DMARC::PurePerl::VERSION = '0.20130528';
+  $Mail::DMARC::PurePerl::VERSION = '1.20130528';
 }
 use strict;
 use warnings;
@@ -214,7 +214,14 @@ sub is_spf_aligned {
     my $self    = shift;
     my $spf_dom = shift;
     if ( !$spf_dom && !$self->spf ) { croak "missing SPF!"; }
-    $spf_dom = $self->spf->{domain} if !$spf_dom;
+
+    if ( ! $spf_dom ) {
+        foreach my $spf ( @{ $self->spf } ) {
+            next if ! $spf->{domain};
+            $spf_dom = $spf->{domain};
+            last;
+        };
+    };
     $spf_dom or croak "missing SPF domain";
 
     # 11.2.4 Perform SPF validation checks.  The results of this step
@@ -502,7 +509,7 @@ Mail::DMARC::PurePerl - Pure Perl implementation of DMARC
 
 =head1 VERSION
 
-version 0.20130528
+version 1.20130528
 
 =head1 METHODS
 

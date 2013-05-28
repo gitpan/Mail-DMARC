@@ -1,6 +1,6 @@
 package Mail::DMARC::Policy;
 {
-  $Mail::DMARC::Policy::VERSION = '0.20130528';
+  $Mail::DMARC::Policy::VERSION = '1.20130528';
 }
 use strict;
 use warnings;
@@ -173,7 +173,7 @@ Mail::DMARC::Policy - a DMARC policy in object format
 
 =head1 VERSION
 
-version 0.20130528
+version 1.20130528
 
 =head1 SYNOPSIS
 

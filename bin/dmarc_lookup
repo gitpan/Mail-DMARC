@@ -42,7 +42,7 @@ dmarc_lookup - look up DMARC policy for a domain
 
 =head1 VERSION
 
-version 0.20130528
+version 1.20130528
 
 =head1 SYNOPSIS
 

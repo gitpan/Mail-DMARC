@@ -21,7 +21,7 @@ dmarc_httpd - a web server for viewing DMARC reports
 
 =head1 VERSION
 
-version 0.20130528
+version 1.20130528
 
 =head1 SYNOPSIS
 

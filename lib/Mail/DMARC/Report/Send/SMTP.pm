@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Send::SMTP;
 {
-  $Mail::DMARC::Report::Send::SMTP::VERSION = '0.20130528';
+  $Mail::DMARC::Report::Send::SMTP::VERSION = '1.20130528';
 }
 use strict;
 use warnings;
@@ -153,6 +153,7 @@ sub _assemble_message {
     my ( $self, $args ) = @_;
 
     my $filename = $self->get_filename($args);
+# WARNING: changes made here MAY affect Send::compress. Check it!
 #   my $cf       = ( time > 1372662000 ) ? 'gzip' : 'zip';   # gz after 7/1/13
     my $cf       = 'gzip';
       $filename .= $cf eq 'gzip' ? '.gz' : '.zip';
@@ -208,7 +209,7 @@ Mail::DMARC::Report::Send::SMTP - send DMARC reports via SMTP
 
 =head1 VERSION
 
-version 0.20130528
+version 1.20130528
 
 =head2 SUBJECT FIELD
 
