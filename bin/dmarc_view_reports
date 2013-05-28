@@ -3,38 +3,137 @@ use strict;
 use warnings;
 
 use Data::Dumper;
+use Getopt::Long;
+use Pod::Usage;
 $|++;
 
+my %command_line_options = (
+    'author:s'      => \my $author,
+    'rcpt_dom:s'    => \my $recipient,
+    'from_dom:s'    => \my $from,
+    'begin:s'       => \my $begin,
+    'end:s'         => \my $end,
+    'disposition:s' => \my $disposition,
+    'dkim:s'        => \my $dkim,
+    'spf:s'         => \my $spf,
+    'dns'           => \my $dns_opt,
+    'geoip'         => \my $geoip_opt,
+    'help'          => \my $help,
+    'verbose'       => \my $verbose,
+    );
+GetOptions (%command_line_options);
+
 use lib 'lib';
+use Mail::DMARC::Base;
 use Mail::DMARC::Report::View::CLI;
 my $cli = Mail::DMARC::Report::View::CLI->new;
+my $base = Mail::DMARC::Base->new;
+my $gip;
+pod2usage if $help;
 
-my $reports = $cli->store->retrieve;
-printf "%3s  %20s  %20s  %15s\n", qw[ ID Recipient From/Sender Report-Start ];
-printf "  | -- %3s %32s %13s %7s %7s %20s\n\n", 'Qty','Source IP','Disposition','DKIM','SPF';
+my $reports = $cli->store->retrieve(
+        (defined $recipient ? (rcpt_domain => $recipient) : () ),
+        (defined $from      ? (from_domain => $from     ) : () ),
+        (defined $author    ? (author      => $author   ) : () ),
+        (defined $begin     ? (begin       => $begin    ) : () ),
+        (defined $end       ? (end         => $end      ) : () ),
+        );
+
+print_header();
 
 foreach my $report ( reverse @$reports) {
-#warn Dumper($report);
-    printf "%3s  %20s  %20s  %15s\n", @$report{qw/ rid rcpt_domain from_domain begin /};
     my $rows = $cli->store->backend->get_row( rid => $report->{rid} )->{rows};
-    foreach my $row ( @$rows ) {
-        printf "  | -- %3s %32s %13s %7s %7s", @$row{qw/ count source_ip disposition dkim spf /};
-        foreach ( @{ $row->{reasons} } ) {
-            print '  ' . $_->{type};
-            print "( $_->{comment} )" if $_->{comment};
-        };
-        print "\n";
-#print Dumper($row);
-    }
+    next if $disposition && ! grep { $_->{disposition} eq $disposition } @$rows;
+    next if $dkim && ! grep { $_->{dkim} eq $dkim } @$rows;
+    next if $spf  && ! grep { $_->{spf } eq $spf } @$rows;
+    print_record($report);
+    print_rows( $rows );
     print "\n";
 }
 
-exit;
+sub print_record {
+    my $rec = shift;
+    printf "%3s  %20s  %20s  %15s\n",
+        @$rec{qw/ rid rcpt_domain from_domain begin /}; # <-- array slice
+    return;
+};
 
+sub print_rows {
+    my $rows = shift;
+    foreach my $row ( @$rows ) {
+        no warnings;
+        next if $disposition && $disposition ne $row->{disposition};
+        next if $dkim && $dkim ne $row->{dkim};
+        next if $spf  && $spf ne $row->{spf};
+        my $dns_hostname = get_dns_hostname( $row->{source_ip} );
+        printf "  | -- %3s %39s %13s %7s %7s", @$row{qw/ count source_ip disposition dkim spf /};
+        foreach my $r ( @{ $row->{reasons} } ) {
+            print '  ' . $r->{type};
+            print "( $r->{comment} )" if $r->{comment};
+        };
+        my $geoip = print_geoip( $row->{source_ip} );
+        print "  $dns_hostname\n";
+    }
+};
+
+sub print_header {
+    printf "%3s  %20s  %20s  %15s\n", qw[ ID Recipient From/Sender Report-Start ];
+    printf "  | -- %3s %39s %13s %7s %7s\n\n", 'Qty','Source IP','Disposition','DKIM','SPF';
+    return;
+};
+
+sub print_geoip {
+    my $ip = shift;
+    return if ! $geoip_opt;
+    $gip ||= get_geoip_db();
+    return if ! $gip;
+
+    my $r = $gip->record_by_addr($ip) or return '';
+    my $country_code = $r->country_code();
+    my $country_name = $r->country_name();
+    my $continent = $r->continent_code();
+    my $city = $r->city;
+    print $city ?  " $city," : ' ';
+    print " $country_code, $continent";
+}
+
+sub get_dns_hostname {
+    my $ip = shift;
+    return if ! $dns_opt;
+
+    my @answers = $base->has_dns_rr('PTR', $ip);
+    return '' if 0 == scalar @answers;
+    return $answers[0] if scalar @answers >= 1;
+    print Dumper(\@answers);
+};
+
+sub get_geoip_db {
+
+    return $gip if $gip;
+    eval "require Geo::IP";
+    if ($@) {
+        warn "unable to load Geo::IP\n";
+        return;
+    };
+
+    foreach my $local ( '/usr/local', '/opt/local' ) {
+        my $db_dir = "$local/share/GeoIP";
+
+        foreach my $db (qw/ GeoIPCity GeoLiteCity /) {
+            if (-f "$db_dir/$db.dat") {
+                print "using db $db" if $verbose;
+                $gip = Geo::IP->open("$db_dir/$db.dat");
+            }
+            last if $gip;
+        }
+        last if $gip;
+    };
+    return $gip;
+}
+
+exit;
 # PODNAME: dmarc_view_reports
 # ABSTRACT: view DMARC reports on the command line
-
-__END__
 
 =pod
 
@@ -44,20 +143,48 @@ dmarc_view_reports - view DMARC reports on the command line
 
 =head1 VERSION
 
-version 0.20130524
+version 0.20130528
 
 =head1 SYNOPSIS
 
-  dmarc_view_reports | less
+  dmarc_view_reports [ --option=value ]
+
+=head2 Search Options
+
+    author       - report author (Yahoo! Inc, google.com, etc..)
+    rcpt_dom     - message recipient domain
+    from_dom     - message sender domain
+    begin        - epoch start time to display messages after
+    end          - epoch end time to display messages before
+    disposition  - DMARC disposition (none,quarantine,reject)
+    dkim         - DKIM alignment result (pass/fail)
+    spf          - SPF alignment result  (pass/fail)
+
+=head2 Other Options
+
+  dmarc_view_reports [ --geoip --dns --help --verbose ]
+
+    geoip        - include GeoIP location (requires the free GeoCity Lite db)
+    dns          - do reverse DNS lookups and display hostnames
+    help         - print this syntax guide
+    verbose      - print additional debug info
 
 =head1 DESCRIPTION
 
 Dumps the contents of the DMARC data store to your terminal. The most recent records are show first.
 
+=head1 EXAMPLES
+
+To search for all reports from google.com that failed DMARC alignment:
+
+  dmarc_view_reports --author=google.com --dkim=fail --spf=fail
+
+Note that we don't use --disposition here. That would only tell us the result of applying DMARC policy, not necessarily if the messages failed DMARC alignment.
+
 =head1 SAMPLE OUTPUT
 
  ID             Recipient           From/Sender     Report-Start
-  | -- Qty                        Source IP   Disposition    DKIM     SPF                     
+  | -- Qty                        Source IP   Disposition    DKIM     SPF
 
  570        theartfarm.com          simerson.net  2013-05-20 09:40:50
   | --   1                   75.126.200.152    quarantine    fail    fail
@@ -115,3 +242,8 @@ This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
+
+__END__
+sub {}
+
+

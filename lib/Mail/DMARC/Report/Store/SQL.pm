@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Store::SQL;
 {
-  $Mail::DMARC::Report::Store::SQL::VERSION = '0.20130524';
+  $Mail::DMARC::Report::Store::SQL::VERSION = '0.20130528';
 }
 use strict;
 use warnings;
@@ -20,7 +20,7 @@ sub save_aggregate {
         if 'Mail::DMARC::Policy' ne ref $agg->policy_published;
 
     #warn Dumper($meta); ## no critic (Carp)
-    foreach my $f ( qw/ domain org_name email begin end report_id / ) {
+    foreach my $f ( qw/ domain org_name email begin end / ) {
         croak "meta field $f required" if ! $agg->metadata->$f;
     }
 
@@ -37,7 +37,18 @@ sub save_aggregate {
 
 sub retrieve {
     my ( $self, %args ) = @_;
-    my $reports = $self->query( $self->get_report_query );
+
+    my $query = $self->get_report_query;
+    my @params;
+    my @known = qw/ rid author rcpt_domain from_domain begin end /;
+
+    foreach my $known ( @known ) {
+        next if ! defined $args{$known};
+        $query .= " AND $known=?";
+        push @params, $args{$known};
+    };
+    my $reports = $self->query( $query );
+
     foreach (@$reports ) {
         $_->{begin} = join(" ", split(/T/, $self->epoch_to_iso( $_->{begin} )));
         $_->{end} = join(" ", split(/T/, $self->epoch_to_iso( $_->{end} )));
@@ -48,40 +59,60 @@ sub retrieve {
 sub retrieve_todo {
     my ( $self, %args ) = @_;
 
-#carp "author id: $author_id\n";
-    my $reports = $self->query( 'SELECT * FROM report r LEFT JOIN report_record rr ON r.id=rr.report_id WHERE rr.count IS NULL AND r.end < ? LIMIT 1', [ time ] );
+    my $query = <<'EO_TODO_QUERY'
+SELECT r.id    AS rid,
+    r.begin    AS begin,
+    r.end      AS end,
+    a.org_name AS author,
+    rd.domain  AS rcpt_domain,
+    fd.domain  AS from_domain
+FROM report r
+LEFT JOIN report_record rr ON r.id=rr.report_id
+LEFT JOIN author a  ON r.author_id=a.id
+LEFT JOIN domain rd ON r.rcpt_domain_id=rd.id
+LEFT JOIN domain fd ON r.from_domain_id=fd.id
+WHERE rr.count IS NULL
+  AND r.end < ?
+ORDER BY r.id
+LIMIT 1
+EO_TODO_QUERY
+;
+    my $reports = $self->query( $query, [ time ] );
     return if ! @$reports;
     my $report = $reports->[0];
-carp "report: " . Dumper($report);
 
     my $agg = Mail::DMARC::Report::Aggregate->new();
-    $agg->metadata->report_id( $report->{id} );
+    $agg->metadata->report_id( $report->{rid} );
+    $agg->metadata->domain( $report->{from_domain} );
 
-    foreach my $f ( qw/ domain org_name email extra_contact_info / ) {
+    foreach my $f ( qw/ org_name email extra_contact_info / ) {
         $agg->metadata->$f( $self->config->{organization}{$f} );
     };
     foreach my $f ( qw/ begin end / ) {
         $agg->metadata->$f( $report->{$f} );
     };
 
-    my $errors = $self->query('SELECT error FROM report_error WHERE report_id=?', [ $report->{id} ] );
+    my $errors = $self->query('SELECT error FROM report_error WHERE report_id=?', [ $report->{rid} ] );
     foreach ( @$errors ) {
         $agg->metadata->error( $_->{error} );
     };
 
     my $pp = $self->query(
             'SELECT * from report_policy_published WHERE report_id=?',
-            [ $report->{id} ]
+            [ $report->{rid} ]
             )->[0];
     $pp->{v} = 'DMARC1';
     $pp->{p} ||= 'none';
+    $pp->{domain} = $report->{from_domain};
     $agg->policy_published( Mail::DMARC::Policy->new( %$pp ) );
-#carp "aggregate: " . Dumper($agg);
 
     my $rows = $self->query( 'SELECT * from report_record WHERE report_id=?',
-        [ $report->{id} ] );
+        [ $report->{rid} ] );
 
     foreach my $row (@$rows) {
+        $row->{policy_evaluated} = {
+            map { $_ => $row->{$_} } qw/ disposition dkim spf /
+        };
         $row->{source_ip} = $self->any_inet_ntop( $row->{source_ip} );
         $row->{reason}    = $self->query(
             'SELECT type,comment from report_record_reason WHERE report_record_id=?',
@@ -158,14 +189,28 @@ sub get_aggregate_rid {
     my $pol  = $aggregate->policy_published;
 
     # check if report exists
-    my $rcpt_dom_id = $self->get_domain_id( $meta->domain );
-    my $author_id   = $self->get_author_id( $meta );
-    my $from_dom_id = $self->get_domain_id( $pol->domain );
+    my $rcpt_dom_id = $self->get_domain_id( $meta->domain ) or croak;
+    my $author_id   = $self->get_author_id( $meta )         or croak;
+    my $from_dom_id = $self->get_domain_id( $pol->domain )  or croak;
 
-    my $ids = $self->query(
+    my $ids;
+    if ( $meta->report_id ) {
+# aggregate reports arriving via the wire will have a report ID and author ID,
+# and hopefully a from_domain_id, but not assuredly
+        $ids = $self->query(
         'SELECT id FROM report WHERE rcpt_domain_id=? AND uuid=? AND author_id=?',
         [ $rcpt_dom_id, $meta->report_id, $author_id ]
-    );
+        );
+    }
+    else {
+# Reports submitted by our local MTA will not have a report ID
+# They are aggregated based on the From domain name where the DMARC policy
+# was discovered.
+        $ids = $self->query(
+        'SELECT id FROM report WHERE rcpt_domain_id=? AND from_domain_id=? AND end > ?',
+        [ $rcpt_dom_id, $from_dom_id, time ]
+        );
+    };
 
     if ( scalar @$ids ) { # report already exists
         return $self->{report_id} = $ids->[0]{id};
@@ -193,11 +238,8 @@ sub get_report {
 
 # TODO: allow custom search ops?  'searchOper'   => 'eq',
     if ( $args{searchField} && $known{ $args{searchField} } ) {
-        $query .= " WHERE $args{searchField}=?";
+        $query .= " AND $args{searchField}=?";
         push @params, $args{searchString};
-    }
-    else {
-        $query .= " WHERE 1=1";
     };
 
     foreach my $known ( @known ) {
@@ -245,17 +287,18 @@ sub get_report {
 sub get_report_query {
     my $self = shift;
     return <<'EO_REPORTS'
-SELECT r.id AS rid,
+SELECT r.id    AS rid,
     r.uuid,
-    r.begin AS begin,
-    r.end   AS end,
+    r.begin    AS begin,
+    r.end      AS end,
     a.org_name AS author,
     rd.domain  AS rcpt_domain,
     fd.domain  AS from_domain
 FROM report r
-LEFT JOIN author a ON r.author_id=a.id
+LEFT JOIN author a  ON r.author_id=a.id
 LEFT JOIN domain rd ON r.rcpt_domain_id=rd.id
 LEFT JOIN domain fd ON r.from_domain_id=fd.id
+WHERE 1=1
 EO_REPORTS
 ;
 };
@@ -312,13 +355,14 @@ sub insert_aggregate_row {
     my $reasons = $rec->{policy_evaluated}{reason};
     if ( $reasons ) {
         foreach my $reason ( @$reasons ) {
+            next if ! $reason || ! $reason->{type};
             $self->insert_rr_reason( $row_id, $reason->{type},
                 $reason->{comment} );
         };
     }
 
     my $spf_ref = $rec->{auth_results}{spf};
-    if ( $spf_ref && scalar @$spf_ref ) {
+    if ( $spf_ref ) {
         foreach my $spf (@$spf_ref) {
             $self->insert_rr_spf( $row_id, $spf );
         }
@@ -327,6 +371,7 @@ sub insert_aggregate_row {
     my $dkim = $rec->{auth_results}{dkim};
     if ($dkim) {
         foreach my $sig (@$dkim) {
+            next if ! $sig || ! $sig->{domain};
             $self->insert_rr_dkim( $row_id, $sig );
         }
     }
@@ -544,7 +589,7 @@ Mail::DMARC::Report::Store::SQL - SQL storage for DMARC reports
 
 =head1 VERSION
 
-version 0.20130524
+version 0.20130528
 
 =head1 DESCRIPTION
 

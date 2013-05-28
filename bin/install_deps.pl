@@ -420,7 +420,7 @@ install_deps.pl - install dependencies with package manager or CPAN
 
 =head1 VERSION
 
-version 0.20130524
+version 0.20130528
 
 =head1 AUTHORS
 

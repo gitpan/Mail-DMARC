@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::View::HTTP;
 {
-  $Mail::DMARC::Report::View::HTTP::VERSION = '0.20130524';
+  $Mail::DMARC::Report::View::HTTP::VERSION = '0.20130528';
 }
 use strict;
 use warnings;
@@ -42,7 +42,7 @@ sub dmarc_httpd {
 
     Net::Server::HTTP->run(
         app => sub { &dmarc_dispatch },
-        port  => [$port, ($ports ? "$ports/ssl" : ()) ],
+        port  => [$port, (($ports && $sslkey && $sslcrt) ? "$ports/ssl" : ()) ],
         ipv   => '*', # IPv6 if available
         ($sslkey ? (SSL_key_file => $sslkey) : ()),
         ($sslcrt ? (SSL_cert_file => $sslcrt) : ()),
@@ -145,27 +145,11 @@ Mail::DMARC::Report::View::HTTP - view stored reports via HTTP
 
 =head1 VERSION
 
-version 0.20130524
+version 0.20130528
 
 =head1 SYNOPSIS
 
-A HTTP interface for the local DMARC report store.
-
-Start the HTTP server by running: dmarc_httpd
-
-Connect with a web browser to L<http://localhost:8080|http://localhost:8080/>.
-
-=head1 DESCRIPTION
-
-A L<Sample Report|http://search.cpan.org/dist/Mail-DMARC/example/report_cgi.png> is available which shows the web interface. It is implemented almost entirely in JavaScript, using jQuery, jQueryUI, and jgGrid.
-
-Web server settings are in the [http] and [https] sections of mail-dmarc.ini.
-
-=head1 THANKS
-
-jQuery - http://www.jquery.com/
-
-jqGrid - http://www.trirand.com/blog/
+See the POD docs / man page for L<dmarc_httpd>.
 
 =head1 AUTHORS
 

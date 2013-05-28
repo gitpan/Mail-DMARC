@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Receive;
 {
-  $Mail::DMARC::Report::Receive::VERSION = '0.20130524';
+  $Mail::DMARC::Report::Receive::VERSION = '0.20130528';
 }
 use strict;
 use warnings;
@@ -328,11 +328,6 @@ sub do_node_record_reason {
     return;
 };
 
-sub verbose {
-    return $_[0]->{verbose} if 1 == scalar @_;
-    return $_[0]->{verbose} = $_[1];
-};
-
 1;
 
 =pod
@@ -343,7 +338,7 @@ Mail::DMARC::Report::Receive - process incoming DMARC reports
 
 =head1 VERSION
 
-version 0.20130524
+version 0.20130528
 
 =head1 DESCRIPTION
 
