@@ -1,6 +1,6 @@
 package Mail::DMARC::PurePerl;
 {
-  $Mail::DMARC::PurePerl::VERSION = '1.20130528';
+  $Mail::DMARC::PurePerl::VERSION = '1.20130531';
 }
 use strict;
 use warnings;
@@ -12,6 +12,8 @@ use parent 'Mail::DMARC';
 sub init {
     my $self = shift;
     $self->is_subdomain(0);
+    $self->{header_from} = undef;
+    $self->{header_from_raw} = undef;
     $self->{policy} = undef;
     $self->{result} = undef;
     $self->{report} = undef;
@@ -91,7 +93,10 @@ sub discover_policy {
 
     # 9.1  Mail Receivers MUST query the DNS for a DMARC TXT record
     my $matches = $self->fetch_dmarc_record( $from_dom, $org_dom );
-    return if 0 == scalar @$matches;
+    if (0 == scalar @$matches ) {
+        $self->result->reason( type => 'other', comment => 'no policy' );
+        return;
+    };
 
     # 9.5. If the remaining set contains multiple records, processing
     #      terminates and the Mail Receiver takes no action.
@@ -387,22 +392,13 @@ sub fetch_dmarc_record {
         }
     }
 
-    $self->result->reason( type => 'other', comment => 'no policy' );
     return \@matches;
 }
 
 sub get_from_dom {
     my ($self) = @_;
+    return $self->header_from if $self->header_from;
 
-    if ( !$self->header_from ) {
-        return $self->get_dom_from_header();
-    }
-
-    return $self->header_from;
-}
-
-sub get_dom_from_header {
-    my $self   = shift;
     my $header = $self->header_from_raw or do {
         $self->result->reason( type => 'other', comment => "no header_from" );
         return;
@@ -509,7 +505,7 @@ Mail::DMARC::PurePerl - Pure Perl implementation of DMARC
 
 =head1 VERSION
 
-version 1.20130528
+version 1.20130531
 
 =head1 METHODS
 
@@ -608,11 +604,9 @@ Query the DNS for the presence of a DMARC record at the header from domain name 
 
 =head2 get_from_dom
 
-Returns the header_from attribute, if defined. When header_from is not defined, returns the results of get_dom_from_header.
+Returns the header_from attribute, if defined.
 
-=head2 get_dom_from_header
-
-Crudely, and very quickly parse a From header and return the domain name (aka, the header_from domain).
+When header_from is not defined, crudely, and very quickly parse a From header and return the domain name (aka, the header_from domain).
 
 The From header format is defined in RFC 822 and is very complex. The From header can contain multiple email addresses, each with different domains. This method returns the last one. If you want to handle this differently, parse the From header yourself and set header_from.
 

@@ -1,5 +1,21 @@
 
+1.20130531 2013-05-30 America/Los_Angeles
+
+ - added gzip support to HTTP server, compressed JS files
+ - reason is internally an arrayref of hashrefs (was a single hashref)
+ - documentation additions
+ - removed unused JS files
+ - add validation and fixup of SPF result for incoming reports
+ - normalized domain columns in spf & dkim tables
+
 1.20130528 2013-05-28 America/Los_Angeles
+
+ - bump major version to 1
+ - normalized domain columns in report_record
+ - fixups to handle reports with invalid formatting
+ - improved handling for IMAP SSL connections
+ - made internal represention of Mail::DMARC::dkim & spf consistent
+   with their aggregate report representation
 
 0.20130528 2013-05-27 America/Los_Angeles
 

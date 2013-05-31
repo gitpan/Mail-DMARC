@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Send::SMTP;
 {
-  $Mail::DMARC::Report::Send::SMTP::VERSION = '1.20130528';
+  $Mail::DMARC::Report::Send::SMTP::VERSION = '1.20130531';
 }
 use strict;
 use warnings;
@@ -209,7 +209,7 @@ Mail::DMARC::Report::Send::SMTP - send DMARC reports via SMTP
 
 =head1 VERSION
 
-version 1.20130528
+version 1.20130531
 
 =head2 SUBJECT FIELD
 

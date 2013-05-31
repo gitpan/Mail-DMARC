@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Send;
 {
-  $Mail::DMARC::Report::Send::VERSION = '1.20130528';
+  $Mail::DMARC::Report::Send::VERSION = '1.20130531';
 }
 use strict;
 use warnings;
@@ -72,7 +72,7 @@ EO_REPORT
 
 sub compress_report {
     my ( $self, $xml_ref ) = @_;
-    die "xml is not a reference!" if 'SCALAR' ne ref $xml_ref;
+    croak "xml is not a reference!" if 'SCALAR' ne ref $xml_ref;
     my $shrunk;
     my $zipper = {
         gz  => \&IO::Compress::Gzip::gzip,    # 2013 draft
@@ -132,7 +132,7 @@ Mail::DMARC::Report::Send - send a DMARC report object
 
 =head1 VERSION
 
-version 1.20130528
+version 1.20130531
 
 =head1 DESCRIPTION
 

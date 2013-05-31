@@ -44,7 +44,7 @@ dmarc_send_reports - send aggregate reports to requestors
 
 =head1 VERSION
 
-version 1.20130528
+version 1.20130531
 
 =head1 AUTHORS
 

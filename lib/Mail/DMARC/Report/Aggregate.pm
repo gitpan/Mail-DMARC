@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Aggregate;
 {
-  $Mail::DMARC::Report::Aggregate::VERSION = '1.20130528';
+  $Mail::DMARC::Report::Aggregate::VERSION = '1.20130531';
 }
 use strict;
 use warnings;
@@ -162,7 +162,7 @@ sub get_policy_evaluated_as_xml {
 
 package Mail::DMARC::Report::Aggregate::Metadata;
 {
-  $Mail::DMARC::Report::Aggregate::Metadata::VERSION = '1.20130528';
+  $Mail::DMARC::Report::Aggregate::Metadata::VERSION = '1.20130531';
 }
 use strict;
 use warnings;
@@ -254,9 +254,15 @@ Mail::DMARC::Report::Aggregate - DMARC aggregate report
 
 =head1 VERSION
 
-version 1.20130528
+version 1.20130531
 
 =head1 DESCRIPTION
+
+This class is used internally as the canonization of an aggregate report.
+
+When reports are received, the XML is parsed into a Report::Aggregate object, which then gets passed to the Report::Store to be file away. When operating as a DMARC reporter, data is extracted from the Report::Store as an Aggregate object.
+
+=head1 2013 Draft Description
 
 AGGREGATE REPORTS
 
@@ -290,6 +296,70 @@ reports at 00:00, 01:00, 02:00; et cetera.  Report Generators using a
 24-hour report period are strongly encouraged to begin that period at
 00:00 UTC, regardless of local timezone or time of report production,
 in order to facilitate correlation.
+
+=head1 Report Structure
+
+This is a translation of the XML report format in the 2013 Draft, converted to perl data structions.
+
+   feedback => {
+      version          => 1,  # decimal
+      report_metadata  => {                # info about DMARC reporter
+          report_id          => string
+          org_name           => 'Art Farm',
+          email              => 'no-reply@theartfarm.com',
+          extra_contact_info => string     # min 0
+          date_range         => {
+              begin          => epoch time,
+              end            => epoch time,
+          },
+          error              => string,   # min 0, max unbounded
+      },
+      policy_published => {
+          domain =>   string
+          adkim  =>   r, s
+          aspf   =>   r, s
+          p      =>   none, quarantine, reject
+          sp     =>   none, quarantine, reject
+          pct    =>   integer
+      },
+      record   => [
+         {  row => {
+               source_ip     =>   # IPAddress
+               count         =>   # integer
+               policy_evaluated => {       # min=0
+                  disposition =>           # none, quarantine, reject
+                  dkim        =>           # pass, fail
+                  spf         =>           # pass, fail
+                  reason      => [         # min 0, max unbounded
+                      {   type    =>    # forwarded sampled_out ...
+                          comment =>    # string, min 0
+                      },
+                  ],
+                }
+            },
+            identifiers => {
+                envelope_to    min=0
+                envelope_from  min=1
+                header_from    min=1
+            },
+            auth_results => {
+               spf => [           # min 1, max unbounded
+                  {  domain  =>    # min 1
+                     scope   =>    # helo, mfrom  -  min 1
+                     result  =>    # none neutral ...
+                  }
+               ]                   # ( unknown -> temperror, error -> permerror )
+               dkim   => [                # min 0, max unbounded
+                  {  domain       =>  ,   # the d= parameter in the signature
+                     selector     =>  ,   # min 0
+                     result       =>  ,   # none pass fail policy ...
+                     human_result =>      # min 0
+                  },
+               ],
+            },
+        ]
+     },
+  };
 
 =head1 AUTHORS
 

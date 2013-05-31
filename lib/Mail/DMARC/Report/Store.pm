@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Store;
 {
-  $Mail::DMARC::Report::Store::VERSION = '1.20130528';
+  $Mail::DMARC::Report::Store::VERSION = '1.20130531';
 }
 use strict;
 use warnings;
@@ -54,13 +54,17 @@ Mail::DMARC::Report::Store - persistent storage broker for DMARC reports
 
 =head1 VERSION
 
-version 1.20130528
+version 1.20130531
+
+=head1 SYNOPSIS
 
 =head1 DESCRIPTION
 
-I first toyed with perl's AnyDBM storage backend. I chose to deploy with SQL because with a single SQL implementation, the user can choose from the wide availability of DBD drivers, including SQLite, MySQL, DBD (same as AnyDBM) and many others.
+At present, the only storage module is L<SQL|Mail::DMARC::Report::Store::SQL>.
 
-Others might like an alternative. This layer of indirection allows someone to write a new Mail::DMARC::Report::Store::MyGreatDB module, update their config file, and not alter the innards of Mail::DMARC. Much.
+I experimented with perl's AnyDBM storage backend, but chose to deploy with SQL because a single SQL implementation supports many DBD drivers, including SQLite, MySQL, and DBD (same as AnyDBM).
+
+This Store class provides a layer of indirection, allowing one to write a new Mail::DMARC::Report::Store::MyGreatDB module, update their config file, and not alter the innards of Mail::DMARC. Much.
 
 =head1 AUTHORS
 

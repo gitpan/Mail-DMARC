@@ -1,6 +1,6 @@
 package Mail::DMARC::Report::Receive;
 {
-  $Mail::DMARC::Report::Receive::VERSION = '1.20130528';
+  $Mail::DMARC::Report::Receive::VERSION = '1.20130531';
 }
 use strict;
 use warnings;
@@ -34,6 +34,7 @@ sub from_imap {
             ($port==993 ? (use_ssl => 1) : ()),
         )
         or do {
+## no critic (PackageVar)
             my $err = $port == 143 ? $Net::IMAP::Simple::errstr : $Net::IMAP::Simple::SSL::errstr;
             croak "Unable to connect to IMAP: $err\n";
         };
@@ -170,13 +171,13 @@ sub from_email_simple {
 sub get_imap_port {
     my $self = shift;
 
-    eval "use IO::Socket::SSL";
+    eval "use IO::Socket::SSL";  ## no critic (Eval)
     if ( $@ ) {
         carp "no SSL, using insecure connection: $!\n";
         return 143;
     };
 
-    eval "use Mozilla::CA";
+    eval "use Mozilla::CA";    ## no critic (Eval)
     if ( ! $@ ) {
         IO::Socket::SSL::set_ctx_defaults(
                 SSL_verifycn_scheme => 'imap',
@@ -384,7 +385,7 @@ Mail::DMARC::Report::Receive - process incoming DMARC reports
 
 =head1 VERSION
 
-version 1.20130528
+version 1.20130531
 
 =head1 DESCRIPTION
 
@@ -404,7 +405,7 @@ When forensic reports are detected, no further processing is done.
 
 When an aggregate report is detected, the report details are extracted from the message body as well as the Subject field/header and attachment metadata.
 
-Parsing of the Subject and MIME metadata is necessary because the 2013 draft DMARC specification does not REQUIRE the submitter domain name to be included in the XML report. The submitter domain is the domain the message was destined to. For example, the only way to B<know> that the email which generated this particular report was sent to hotmail.com is to extract the submitter domain from the message metadata (Org Name=Microsoft, hotmail.com is not in the XML). So far, every messsage I have seen has had the submitter domain in one location or the other.
+Parsing of the Subject and MIME metadata is necessary because the 2013 draft DMARC specification does not REQUIRE the envelope_to domain name to be included in the XML report. For example, the only way to B<know> that the email which generated this particular report was sent to hotmail.com is to extract the envelope_to domain from the message metadata (Org Name=Microsoft, hotmail.com is not in the XML). So far, every messsage I have seen has had the envelope_to domain in one location or the other.
 
 To extract messages from the message body, the MIME attachments are decompressed and passed to L<handle_body>.
 
