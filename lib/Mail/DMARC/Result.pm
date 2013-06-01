@@ -1,7 +1,5 @@
 package Mail::DMARC::Result;
-{
-  $Mail::DMARC::Result::VERSION = '1.20130531';
-}
+our $VERSION = '1.20130601'; # VERSION
 use strict;
 use warnings;
 
@@ -90,10 +88,7 @@ sub reason {
 
 # ABSTRACT: DMARC processing results
 
-package Mail::DMARC::Result::Reason;
-{
-  $Mail::DMARC::Result::Reason::VERSION = '1.20130531';
-}    ## no critic (MultiplePackages)
+package Mail::DMARC::Result::Reason;    ## no critic (MultiplePackages)
 use strict;
 use warnings;
 
@@ -138,7 +133,7 @@ Mail::DMARC::Result - DMARC processing results
 
 =head1 VERSION
 
-version 1.20130531
+version 1.20130601
 
 =head1 OVERVIEW
 

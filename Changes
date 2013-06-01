@@ -1,4 +1,10 @@
 
+1.20130601 2013-05-31 America/Los_Angeles
+
+ - make sure a report record exists when fetching SMTP todo
+ - added insecure SMTP fallback if STARTTLS fails
+ - added color coded results to HTTP grid
+
 1.20130531 2013-05-30 America/Los_Angeles
 
  - added gzip support to HTTP server, compressed JS files

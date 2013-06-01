@@ -1,7 +1,5 @@
 package Mail::DMARC::Report::URI;
-{
-  $Mail::DMARC::Report::URI::VERSION = '1.20130531';
-}
+our $VERSION = '1.20130601'; # VERSION
 use strict;
 use warnings;
 
@@ -14,7 +12,8 @@ sub new {
 }
 
 sub parse {
-    my ( $self, $str ) = @_;
+    my $self = shift;
+    my $str = shift or croak "URI string is required!";
 
     my @valids = ();
     foreach my $raw ( split /,/, $str ) {
@@ -65,7 +64,7 @@ Mail::DMARC::Report::URI - a DMARC reporting URI
 
 =head1 VERSION
 
-version 1.20130531
+version 1.20130601
 
 =head1 DESCRIPTION
 

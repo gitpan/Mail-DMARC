@@ -1,7 +1,5 @@
 package Mail::DMARC::Report::Send;
-{
-  $Mail::DMARC::Report::Send::VERSION = '1.20130531';
-}
+our $VERSION = '1.20130601'; # VERSION
 use strict;
 use warnings;
 
@@ -132,7 +130,7 @@ Mail::DMARC::Report::Send - send a DMARC report object
 
 =head1 VERSION
 
-version 1.20130531
+version 1.20130601
 
 =head1 DESCRIPTION
 

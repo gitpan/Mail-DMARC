@@ -1,7 +1,5 @@
 package Mail::DMARC::Report::Aggregate;
-{
-  $Mail::DMARC::Report::Aggregate::VERSION = '1.20130531';
-}
+our $VERSION = '1.20130601'; # VERSION
 use strict;
 use warnings;
 
@@ -161,9 +159,6 @@ sub get_policy_evaluated_as_xml {
 # ABSTRACT: DMARC aggregate report
 
 package Mail::DMARC::Report::Aggregate::Metadata;
-{
-  $Mail::DMARC::Report::Aggregate::Metadata::VERSION = '1.20130531';
-}
 use strict;
 use warnings;
 
@@ -254,7 +249,7 @@ Mail::DMARC::Report::Aggregate - DMARC aggregate report
 
 =head1 VERSION
 
-version 1.20130531
+version 1.20130601
 
 =head1 DESCRIPTION
 

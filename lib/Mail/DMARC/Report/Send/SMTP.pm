@@ -1,7 +1,5 @@
 package Mail::DMARC::Report::Send::SMTP;
-{
-  $Mail::DMARC::Report::Send::SMTP::VERSION = '1.20130531';
-}
+our $VERSION = '1.20130601'; # VERSION
 use strict;
 use warnings;
 
@@ -55,26 +53,16 @@ sub via_net_smtp {
     my $body = $self->_assemble_message($args);
 
     my $err  = "found " . scalar @try_mx . " MX";
-    my $smtp = Net::SMTPS->new(
-        [@try_mx],
-        Timeout         => 10,
-        Port            => $c->{smarthost} ? 587 : 25,
-        Hello           => $hostname,
-        doSSL           => 'starttls',
-        SSL_verify_mode => 'SSL_VERIFY_NONE',
-        )
-        or do {
+    my $smtp = $self->connect_smtp_tls($hostname, @try_mx)
+            || $self->connect_smtp($hostname, @try_mx);
+
+    if ( ! $smtp ) {
         carp "$err but 0 available for $to_domain\n";
         return;
-        };
+    };
 
     carp "deliving message to $args->{to}\n";
 
-    if ( $c->{smarthost} && $c->{smartuser} && $c->{smartpass} ) {
-        $smtp->auth( $c->{smartuser}, $c->{smartpass} ) or do {
-            carp "$err but auth attempt for $c->{smartuser} failed";
-        };
-    }
     my $from = $self->config->{organization}{email};
     $smtp->mail($from) or do {
         carp "MAIL FROM $from rejected\n";
@@ -111,6 +99,49 @@ sub get_to_dom {
     my ($to_dom) = ( split /@/, $args->{to} )[-1];
     return $to_dom;
 }
+
+sub connect_smtp {
+    my ($self, $hostname, @try_mx) = @_;
+
+    my $smtp = Net::SMTP->new(
+        [@try_mx],
+        Timeout         => 10,
+        Port            => 25,
+        Hello           => $hostname,
+        )
+        or do {
+            carp "SMTP connection failed\n";
+            return;
+        };
+
+    return $smtp;
+};
+
+sub connect_smtp_tls {
+    my ($self, $hostname, @try_mx) = @_;
+
+    my $smtp = Net::SMTPS->new(
+        [@try_mx],
+        Timeout         => 10,
+        Port            => $self->config->{smtp}{smarthost} ? 587 : 25,
+        Hello           => $hostname,
+        doSSL           => 'starttls',
+        SSL_verify_mode => 'SSL_VERIFY_NONE',
+        )
+        or do {
+            carp "SSL connection failed\n";
+            return;
+        };
+
+    my $c = $self->config->{smtp};
+    if ( $c->{smarthost} && $c->{smartuser} && $c->{smartpass} ) {
+        $smtp->auth( $c->{smartuser}, $c->{smartpass} ) or do {
+            carp "auth attempt for $c->{smartuser} failed";
+        };
+    }
+
+    return $smtp;
+};
 
 sub get_smtp_hosts {
     my $self = shift;
@@ -209,7 +240,7 @@ Mail::DMARC::Report::Send::SMTP - send DMARC reports via SMTP
 
 =head1 VERSION
 
-version 1.20130531
+version 1.20130601
 
 =head2 SUBJECT FIELD
 
