@@ -30,7 +30,6 @@ test_date_range();
 test_begin();
 test_end();
 test_error();
-test_domain();
 test_uuid();
 test_as_xml();
 
@@ -82,13 +81,6 @@ sub test_error {
     };
     is_deeply($meta->error, $test_errors, "error, deeply");
 };
-sub test_domain {
-    my @domains = qw/ 3.am a.very.long.domain.with.subdomains /;
-    foreach my $dom ( @domains ) {
-        ok( $meta->domain( $dom ), "domain, set, $dom");
-        cmp_ok( $meta->domain, 'eq', $dom, "domain, get, $dom" );
-    };
-};
 sub test_uuid  {
     my $uuid = '1234908748913u41u4-1203847308924-adskfjadslfj-13i41230984';
     ok( $meta->uuid($uuid), "uuid, set");
@@ -96,18 +88,18 @@ sub test_uuid  {
 };
 sub test_as_xml  {
     my $expected = <<"EO_XML"
- <report_metadata>
-  <report_id>12345566677888\@sender.com</report_id>
-  <org_name>Test Org</org_name>
-  <email>test\@example.com</email>
-  <extra_contact_info>http://www.example.com/path/to/dmarc.cgi</extra_contact_info>
-  <date_range>
-   <begin>$start</begin>
-   <end>$end</end>
-  </date_range>
-  <error>error #1 for test</error>
-  <error>error #2 for testing</error>
- </report_metadata>
+\t<report_metadata>
+\t\t<report_id>12345566677888\@sender.com</report_id>
+\t\t<org_name>Test Org</org_name>
+\t\t<email>test\@example.com</email>
+\t\t<extra_contact_info>http://www.example.com/path/to/dmarc.cgi</extra_contact_info>
+\t\t<date_range>
+\t\t\t<begin>$start</begin>
+\t\t\t<end>$end</end>
+\t\t</date_range>
+\t\t<error>error #1 for test</error>
+\t\t<error>error #2 for testing</error>
+\t</report_metadata>
 EO_XML
 ;
     chomp $expected;

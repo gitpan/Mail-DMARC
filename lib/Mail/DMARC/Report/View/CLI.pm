@@ -1,5 +1,5 @@
 package Mail::DMARC::Report::View::CLI;
-our $VERSION = '1.20130601'; # VERSION
+our $VERSION = '1.20130604'; # VERSION
 use strict;
 use warnings;
 
@@ -17,7 +17,7 @@ sub list {
     my $self    = shift;
     my $reports = $self->store->retrieve;
     foreach my $report ( reverse @$reports) {
-        printf "%3s  %20s  %20s  %15s\n", @$report{qw/ rid from_domain rcpt_domain begin /};
+        printf "%3s  %20s  %15s\n", @$report{qw/ rid from_domain begin /};
     }
     return $reports;
 }
@@ -48,7 +48,7 @@ Mail::DMARC::Report::View::CLI - view locally stored DMARC reports
 
 =head1 VERSION
 
-version 1.20130601
+version 1.20130604
 
 =head1 AUTHORS
 

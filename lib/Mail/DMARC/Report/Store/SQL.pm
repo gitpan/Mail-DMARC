@@ -1,5 +1,5 @@
 package Mail::DMARC::Report::Store::SQL;
-our $VERSION = '1.20130601'; # VERSION
+our $VERSION = '1.20130604'; # VERSION
 use strict;
 use warnings;
 
@@ -18,16 +18,15 @@ sub save_aggregate {
         if 'Mail::DMARC::Policy' ne ref $agg->policy_published;
 
     #warn Dumper($meta); ## no critic (Carp)
-    foreach my $f ( qw/ domain org_name email begin end / ) {
+    foreach my $f ( qw/ org_name email begin end / ) {
         croak "meta field $f required" if ! $agg->metadata->$f;
     }
 
-    my $rid = $self->get_aggregate_rid( $agg )
+    my $rid = $self->get_report_id( $agg )
         or croak "failed to create report!";
 
     foreach my $rec ( @{ $agg->record } ) {
-        next if !$rec;
-        $self->insert_aggregate_row($rid, $rec);
+        $self->insert_agg_record($rid, $rec);
     };
 
     return $rid;
@@ -38,7 +37,7 @@ sub retrieve {
 
     my $query = $self->get_report_query;
     my @params;
-    my @known = qw/ rid author rcpt_domain from_domain begin end /;
+    my @known = qw/ rid author from_domain begin end /;
 
     foreach my $known ( @known ) {
         next if ! defined $args{$known};
@@ -55,7 +54,7 @@ sub retrieve {
 }
 
 sub retrieve_todo {
-    my ( $self, %args ) = @_;
+    my ( $self, @args ) = @_;
 
     my $reports = $self->query( $self->get_todo_query, [ time ] );
     return if ! @$reports;
@@ -63,7 +62,6 @@ sub retrieve_todo {
 
     my $agg = Mail::DMARC::Report::Aggregate->new();
     $agg->metadata->report_id( $report->{rid} );
-    $agg->metadata->domain( $report->{from_domain} );
 
     foreach my $f ( qw/ org_name email extra_contact_info / ) {
         $agg->metadata->$f( $self->config->{organization}{$f} );
@@ -86,25 +84,51 @@ sub retrieve_todo {
     $pp->{domain} = $report->{from_domain};
     $agg->policy_published( Mail::DMARC::Policy->new( %$pp ) );
 
-    my $rows = $self->query( 'SELECT * from report_record WHERE report_id=?',
-        [ $report->{rid} ] );
+    my $recs = $self->query( $self->get_rr_query, [ $report->{rid} ] );
 
-    foreach my $row (@$rows) {
-        $row->{policy_evaluated} = {
-            map { $_ => $row->{$_} } qw/ disposition dkim spf /
-        };
-        $row->{source_ip} = $self->any_inet_ntop( $row->{source_ip} );
-        $row->{reason}    = $self->get_row_reason( $row->{id} );
-        $row->{auth_results}{spf} = $self->get_row_spf($row->{id});
-        $row->{auth_results}{dkim} = $self->get_row_dkim($row->{id});
-        $agg->record($row);
+    # aggregate the connections per IP
+    my (%ips, %pe, %auth, %ident, %reasons);
+    foreach my $rec ( @$recs ) {
+        my $ip = $rec->{source_ip};
+        $ips{ $ip }++;
+        $ident{$ip}{header_from}   ||= $rec->{header_from};
+        $ident{$ip}{envelope_from} ||= $rec->{envelope_from};
+        $ident{$ip}{envelope_to}   ||= $rec->{envelope_to};
+
+        $pe{$ip}{disposition} ||= $rec->{disposition};
+        $pe{$ip}{dkim} ||= $rec->{dkim};
+        $pe{$ip}{spf} ||= $rec->{spf};
+
+        $auth{ $ip }{spf } ||= $self->get_row_spf($rec->{id});
+        $auth{ $ip }{dkim} ||= $self->get_row_dkim($rec->{id});
+
+        my $reasons = $self->get_row_reason( $rec->{id} );
+        foreach my $reason ( @$reasons ) {
+            my $type = $reason->{type} or next;
+            $reasons{$ip}{$type} = $reason->{comment};   # flatten reasons
+        }
+    }
+
+    foreach my $ip ( keys %ips ) {
+        $agg->record( {
+            identifiers  => $ident{$ip},
+            auth_results => $auth{$ip},
+            row => {
+                source_ip => $self->any_inet_ntop( $ip ),
+                count     => $ips{ $ip },
+                policy_evaluated => {
+                    %{ $pe{$ip} },
+                    $reasons{$ip} ? ( reason => [ map { { type => $_, comment => $reasons{$ip}{$_} } } keys %{ $reasons{$ip} } ] ) : (),
+                },
+            },
+        } );
     }
     return $agg;
 }
 
 sub delete_report {
     my $self = shift;
-    my $report_id = shift or carp "missing report ID";
+    my $report_id = shift or croak "missing report ID";
     print "deleting report $report_id\n";
 
     # deletes with FK don't cascade in SQLite? Clean each table manually
@@ -134,8 +158,7 @@ sub get_domain_id {
     if ( $r && scalar @$r ) {
         return $r->[0]{id};
     }
-    return $self->query( 'INSERT INTO domain (domain) VALUES (?)',
-        [$domain] );
+    return $self->query( 'INSERT INTO domain (domain) VALUES (?)', [$domain]);
 }
 
 sub get_author_id {
@@ -153,33 +176,30 @@ sub get_author_id {
     );
 }
 
-sub get_aggregate_rid {
-    my ( $self, $aggregate ) = @_;
+sub get_report_id {
+    my ( $self, $aggr ) = @_;
 
-    my $meta = $aggregate->metadata;
-    my $pol  = $aggregate->policy_published;
+    my $meta = $aggr->metadata;
+    my $pol  = $aggr->policy_published;
 
     # check if report exists
-    my $rcpt_dom_id = $self->get_domain_id( $meta->domain ) or croak;
     my $author_id   = $self->get_author_id( $meta )         or croak;
     my $from_dom_id = $self->get_domain_id( $pol->domain )  or croak;
 
     my $ids;
     if ( $meta->report_id ) {
-# aggregate reports arriving via the wire will have a report ID and author ID,
-# and hopefully a from_domain_id, but not assuredly
+# reports arriving via the wire will have an author ID & report ID
         $ids = $self->query(
-        'SELECT id FROM report WHERE rcpt_domain_id=? AND uuid=? AND author_id=?',
-        [ $rcpt_dom_id, $meta->report_id, $author_id ]
+        'SELECT id FROM report WHERE uuid=? AND author_id=?',
+        [ $meta->report_id, $author_id ]
         );
     }
     else {
 # Reports submitted by our local MTA will not have a report ID
-# They are aggregated based on the From domain name where the DMARC policy
-# was discovered.
+# They aggregate on the From domain, where the DMARC policy was discovered
         $ids = $self->query(
-        'SELECT id FROM report WHERE rcpt_domain_id=? AND from_domain_id=? AND end > ?',
-        [ $rcpt_dom_id, $from_dom_id, time ]
+        'SELECT id FROM report WHERE from_domain_id=? AND end > ?',
+        [ $from_dom_id, time ]
         );
     };
 
@@ -188,8 +208,8 @@ sub get_aggregate_rid {
     }
 
     my $rid = $self->{report_id} = $self->query(
-        'INSERT INTO report (from_domain_id, rcpt_domain_id, begin, end, author_id, uuid) VALUES (??)',
-        [ $from_dom_id, $rcpt_dom_id, $meta->begin, $meta->end, $author_id, $meta->uuid ]
+        'INSERT INTO report (from_domain_id, begin, end, author_id, uuid) VALUES (??)',
+        [ $from_dom_id, $meta->begin, $meta->end, $author_id, $meta->uuid ]
     ) or return;
 
     $self->insert_published_policy( $rid, $pol );
@@ -200,11 +220,10 @@ sub get_report {
     my ($self,@args) = @_;
     croak "invalid parameters" if @args % 2;
     my %args = @args;
-#warn Dumper(\%args);
 
     my $query = $self->get_report_query;
     my @params;
-    my @known = qw/ rid author rcpt_domain from_domain begin end /;
+    my @known = qw/ rid author from_domain begin end /;
     my %known = map { $_ => 1 } @known;
 
 # TODO: allow custom search ops?  'searchOper'   => 'eq',
@@ -263,11 +282,9 @@ SELECT r.id    AS rid,
     r.begin    AS begin,
     r.end      AS end,
     a.org_name AS author,
-    rd.domain  AS rcpt_domain,
     fd.domain  AS from_domain
 FROM report r
 LEFT JOIN author a  ON r.author_id=a.id
-LEFT JOIN domain rd ON r.rcpt_domain_id=rd.id
 LEFT JOIN domain fd ON r.from_domain_id=fd.id
 WHERE 1=1
 EO_REPORTS
@@ -280,12 +297,10 @@ SELECT r.id    AS rid,
     r.begin    AS begin,
     r.end      AS end,
     a.org_name AS author,
-    rd.domain  AS rcpt_domain,
     fd.domain  AS from_domain
 FROM report r
 LEFT JOIN report_record rr ON r.id=rr.report_id
 LEFT JOIN author a  ON r.author_id=a.id
-LEFT JOIN domain rd ON r.rcpt_domain_id=rd.id
 LEFT JOIN domain fd ON r.from_domain_id=fd.id
 WHERE rr.count IS NULL
   AND rr.report_id IS NOT NULL
@@ -297,28 +312,14 @@ EO_TODO_QUERY
 ;
 };
 
-sub get_row {
+sub get_rr {
     my ($self,@args) = @_;
     croak "invalid parameters" if @args % 2;
     my %args = @args;
 #warn Dumper(\%args);
     croak "missing report ID (rid)!" if ! defined $args{rid};
 
-    my $query = <<'EO_ROW_QUERY'
-SELECT rr.*,
-    etd.domain AS envelope_to,
-    efd.domain AS envelope_from,
-    hfd.domain AS header_from
-FROM report_record rr
-LEFT JOIN domain etd ON etd.id=rr.envelope_to_did
-LEFT JOIN domain efd ON efd.id=rr.envelope_from_did
-LEFT JOIN domain hfd ON hfd.id=rr.header_from_did
-WHERE report_id = ?
-EO_ROW_QUERY
-        ;
-    my @params = $args{rid};
-
-    my $rows = $self->query($query, \@params);
+    my $rows = $self->query( $self->get_rr_query, [ $args{rid} ] );
     foreach ( @$rows ) {
         $_->{reasons} = $self->query('SELECT type,comment FROM report_record_reason WHERE report_record_id=?', [ $_->{id} ] );
         $_->{source_ip} = $self->any_inet_ntop( $_->{source_ip} );
@@ -370,23 +371,38 @@ sub get_row_reason {
     );
 };
 
+sub get_rr_query {
+    return <<'EO_ROW_QUERY'
+SELECT rr.*,
+    etd.domain AS envelope_to,
+    efd.domain AS envelope_from,
+    hfd.domain AS header_from
+FROM report_record rr
+LEFT JOIN domain etd ON etd.id=rr.envelope_to_did
+LEFT JOIN domain efd ON efd.id=rr.envelope_from_did
+LEFT JOIN domain hfd ON hfd.id=rr.header_from_did
+WHERE report_id = ?
+EO_ROW_QUERY
+        ;
+};
+
 sub row_exists {
     my ($self, $rid, $rec ) = @_;
 
-    if ( ! defined $rec->{count} ) {
+    if ( ! defined $rec->{row}{count} ) {
         carp "\tnew record";
         return;
     };
 
     my $rows = $self->query('SELECT id FROM report_record WHERE report_id=? AND source_ip=? AND count=?',
-            [ $rid, $rec->{identifiers}{source_ip}, $rec->{count}, ]
+            [ $rid, $rec->{row}{source_ip}, $rec->{row}{count}, ]
             );
 
     return 1 if scalar @$rows;
     return;
 };
 
-sub insert_aggregate_row {
+sub insert_agg_record {
     my ($self, $rid, $rec) = @_;
 
     return 1 if $self->row_exists( $rid, $rec);
@@ -472,28 +488,27 @@ sub insert_rr_spf {
 }
 
 sub insert_rr {
-    my ( $self, $report_id, $row ) = @_;
+    my ( $self, $report_id, $rec ) = @_;
     $report_id or croak "report ID required?!";
     my $query = <<'EO_ROW_INSERT'
 INSERT INTO report_record
    (report_id, source_ip, count, header_from_did, envelope_to_did, envelope_from_did,
-    disposition, dkim, spf
-    )
+    disposition, dkim, spf)
    VALUES (??)
 EO_ROW_INSERT
         ;
 
     my @args = ( $report_id,
-        $self->any_inet_pton( $row->{identifiers}{source_ip} ),
-        $row->{count},
+        $self->any_inet_pton( $rec->{row}{source_ip} ),
+        $rec->{row}{count},
     );
     foreach ( qw/ header_from envelope_to envelope_from / ) {
-        push @args, $row->{identifiers}{$_} ?
-            $self->get_domain_id( $row->{identifiers}{$_} ) : undef;
+        push @args, $rec->{identifiers}{$_} ?
+            $self->get_domain_id( $rec->{identifiers}{$_} ) : undef;
     };
-    push @args, map { $row->{policy_evaluated}{$_} } qw/ disposition dkim spf /;
-    my $row_id = $self->query( $query, \@args ) or croak;
-    return $self->{report_row_id} = $row_id;
+    push @args, map { $rec->{row}{policy_evaluated}{$_} } qw/ disposition dkim spf /;
+    my $rr_id = $self->query( $query, \@args ) or croak;
+    return $self->{report_row_id} = $rr_id;
 }
 
 sub insert_published_policy {
@@ -651,7 +666,7 @@ Mail::DMARC::Report::Store::SQL - SQL storage for DMARC reports
 
 =head1 VERSION
 
-version 1.20130601
+version 1.20130604
 
 =head1 DESCRIPTION
 

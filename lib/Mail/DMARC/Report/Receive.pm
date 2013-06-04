@@ -1,5 +1,5 @@
 package Mail::DMARC::Report::Receive;
-our $VERSION = '1.20130601'; # VERSION
+our $VERSION = '1.20130604'; # VERSION
 use strict;
 use warnings;
 
@@ -121,6 +121,8 @@ sub from_email_simple {
     my ( $self, $email ) = @_;
 
     $self->report->init();
+    $self->{_envelope_to} = undef;
+    $self->{_header_from} = undef;
     $self->get_submitter_from_subject( $email->header('Subject') );
 
     my $unzipper = {
@@ -146,16 +148,14 @@ sub from_email_simple {
         if (   $c_type eq 'application/zip'
             || $c_type eq 'application/x-zip-compressed' )
         {
-            $self->get_submitter_from_filename(
-                $part->{ct}{attributes}{name} );
+            $self->get_submitter_from_filename( $part->{ct}{attributes}{name} );
             $unzipper->{zip}->( \$part->body, \$bigger );
             $self->handle_body($bigger);
             $rep_type = 'aggregate';
             next;
         }
         if ( $c_type eq 'application/gzip' ) {
-            $self->get_submitter_from_filename(
-                $part->{ct}{attributes}{name} );
+            $self->get_submitter_from_filename( $part->{ct}{attributes}{name} );
             $unzipper->{gz}->( \$part->body, \$bigger );
             $self->handle_body($bigger);
             $rep_type = 'aggregate';
@@ -195,9 +195,10 @@ sub get_imap_port {
 
 sub get_submitter_from_filename {
     my ( $self, $filename ) = @_;
-    return if $self->report->aggregate->metadata->domain;
+    return if $self->{_envelope_to};  # already parsed from Subject:
     my ( $submitter_dom, $report_dom, $begin, $end ) = split /!/, $filename;
-    return $self->report->aggregate->metadata->domain($submitter_dom);
+    $self->{_header_from} ||= $report_dom;
+    return $self->{_envelope_to} = $submitter_dom;
 }
 
 sub get_submitter_from_subject {
@@ -208,10 +209,8 @@ sub get_submitter_from_subject {
   # more concerned with reliably extracting the submitter domain. Quickly.
     $subject = lc Encode::decode( 'MIME-Header', $subject );
     print $subject . "\n";
-    $subject = substr( $subject, 8 )
-        if 'subject:' eq substr( $subject, 0, 8 );
-    $subject
-        =~ s/(?:report\sdomain|submitter|report-id)//gx;    # remove keywords
+    $subject = substr( $subject, 8 ) if 'subject:' eq substr( $subject, 0, 8 );
+    $subject =~ s/(?:report\sdomain|submitter|report-id)//gx; # strip keywords
     $subject =~ s/\s+//g;    # remove white space
     my ( undef, $report_dom, $sub_dom, $report_id ) = split /:/, $subject;
     my $meta = $self->report->aggregate->metadata;
@@ -221,7 +220,8 @@ sub get_submitter_from_subject {
         chop $report_id if '>' eq substr($report_id,-1,1);
         $meta->uuid($report_id);
     };
-    return $meta->domain($sub_dom);
+    $self->{_header_from} ||= $report_dom;
+    return $self->{_envelope_to} = $sub_dom;
 }
 
 sub handle_body {
@@ -255,8 +255,8 @@ sub do_node_report_metadata {
     }
 
     my $rid = $node->findnodes("./report_id")->string_value;
-    $rid = substr($rid,1) if '<' eq substr($rid,0,1);
-    chop $rid if '>' eq substr($rid,-1,1);
+    $rid = substr($rid,1) if '<' eq substr($rid,0,1); # remove <
+    chop $rid if '>' eq substr($rid,-1,1);            # remove >
     $self->report->aggregate->metadata->report_id( $rid );
 
     if ( ! $self->report->aggregate->metadata->uuid ) {
@@ -292,37 +292,40 @@ sub do_node_policy_published {
 sub do_node_record {
     my ( $self, $node ) = @_;
 
-    my $row;
-    $self->do_node_record_auth(\$row, $node);
+    my $rec;
+    $self->do_node_record_auth(\$rec, $node);
 
-    $row->{identifiers}{source_ip}
-        = $node->findnodes("./row/source_ip")->string_value;
-
-    $row->{count} = $node->findnodes("./row/count")->string_value;
+    foreach my $row (qw/ source_ip count /) {
+        $rec->{row}{$row} = $node->findnodes("./row/$row")->string_value;
+    };
 
     # policy_evaluated
     foreach my $pe (qw/ disposition dkim spf /) {
-        $row->{policy_evaluated}{$pe}
+        $rec->{row}{policy_evaluated}{$pe}
             = $node->findnodes("./row/policy_evaluated/$pe")->string_value;
     }
 
     # reason
-    $self->do_node_record_reason( \$row, $node );
+    $self->do_node_record_reason( \$rec, $node );
 
     # identifiers
     foreach my $i (qw/ envelope_to envelope_from header_from /) {
-        $row->{identifiers}{$i}
+        $rec->{identifiers}{$i}
             = $node->findnodes("./identifiers/$i")->string_value;
     }
 
-# this is for reports from junc.org with mis-labeled identifiers
-    if ( ! $row->{identifiers}{header_from} ) {
-        $row->{identifiers}{header_from}
+# for reports from junc.org with mis-labeled identifiers
+    if ( ! $rec->{identifiers}{header_from} ) {
+        $rec->{identifiers}{header_from}
             = $node->findnodes("./identities/header_from")->string_value;
     };
 
-    $self->report->aggregate->record($row);
-    return $row;
+# last resort...
+    $rec->{identifiers}{envelope_to} ||= $self->{_envelope_to};
+    $rec->{identifiers}{header_from} ||= $self->{_header_from};
+
+    $self->report->aggregate->record($rec);
+    return $rec;
 }
 
 sub do_node_record_auth {
@@ -331,7 +334,7 @@ sub do_node_record_auth {
     my @dkim = qw/ domain selector result human_result /,
     my @spf  = qw/ domain scope result /;
 
-    foreach my $n ( $node->findnodes("./auth_results/spf") ) {
+    foreach ( $node->findnodes("./auth_results/spf") ) {
         my %spf = map { $_ => $node->findnodes("./auth_results/spf/$_")->string_value } @spf;
 
         if ( $spf{scope} && ! $self->is_valid_spf_scope( $spf{scope} ) ) {
@@ -346,7 +349,7 @@ sub do_node_record_auth {
         push @{ $$row->{auth_results}{spf} }, \%spf;
     };
 
-    foreach my $n ( $node->findnodes("./auth_results/dkim") ) {
+    foreach ( $node->findnodes("./auth_results/dkim") ) {
         push @{ $$row->{auth_results}{dkim} }, {
             map { $_ => $node->findnodes("./auth_results/dkim/$_")->string_value } @dkim
         };
@@ -383,7 +386,7 @@ Mail::DMARC::Report::Receive - process incoming DMARC reports
 
 =head1 VERSION
 
-version 1.20130601
+version 1.20130604
 
 =head1 DESCRIPTION
 

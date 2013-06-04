@@ -3,6 +3,13 @@
 [The source code is hosted on GitHub](https://github.com/msimerson/mail-dmarc)
 
 
+# About the branches
+
+The two branches of concern are master and releases. Master is where the action is, but the rides on that playground require Dist::Zilla. Seriously, you can't even run 'make test' in the master branch without the D.Z. If you fear/loathe/hate the D.Z, stick with the release branch.
+
+The releases branch is automatically updated when new releases are made. It contains all the automatically generated files that the master branch doesn't, such as README, Makefile.PL, and Build.PL. It is identical to the distribution as you'd find it on CPAN, making it far easier for causual perl programmers to patch against.
+
+
 # Download the source
 
 To make changes or submit patches, visit the URL above and click the ***Fork*** button. Then clone your fork to your local disk with this git command:
@@ -35,7 +42,7 @@ When you are done with that branch, you can merge it back into the master branch
     git checkout master
     git merge fix-knob-handle
 
-When the branch is no longer useful, delete it:
+When the new feature branch is no longer useful, delete it:
 
     git branch -d fix-knob-handle
 

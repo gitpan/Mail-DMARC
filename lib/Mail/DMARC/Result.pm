@@ -1,5 +1,5 @@
 package Mail::DMARC::Result;
-our $VERSION = '1.20130601'; # VERSION
+our $VERSION = '1.20130604'; # VERSION
 use strict;
 use warnings;
 
@@ -76,10 +76,7 @@ sub result {
 
 sub reason {
     my ($self,@args) = @_;
-    if ( ! scalar @args ) {
-        return $self->{reason} if ref $self->{reason};
-        return [];
-    };
+    return $self->{reason} if ! scalar @args;
     push @{ $self->{reason}}, Mail::DMARC::Result::Reason->new(@args);
     return $self->{reason};
 }
@@ -133,7 +130,7 @@ Mail::DMARC::Result - DMARC processing results
 
 =head1 VERSION
 
-version 1.20130601
+version 1.20130604
 
 =head1 OVERVIEW
 

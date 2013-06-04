@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-our $VERSION = '1.20130601'; # VERSION
+our $VERSION = '1.20130604'; # VERSION
 use strict;
 use warnings;
 
@@ -14,20 +14,21 @@ my $report = Mail::DMARC::Report->new();
 #my $schema = 'http://dmarc.org/dmarc-xml/0.1/rua.xsd';
 #my $xmlschema = XML::LibXML::Schema->new( location => $schema );
 
-# 1. get list of reports ready to send
+# 1. get reports, one at a time
 while (defined(my $aggregate = $report->store->retrieve_todo ) ) {
 
+    print "report ID: " . $aggregate->metadata->report_id . "\n";
     print $aggregate->metadata->domain . "\n";
     print "rua: " . $aggregate->policy_published->rua . "\n";
     my $xml = $aggregate->as_xml();
-#    warn $xml;
+#   warn $xml;  ## no critic (Carp)
 #    my $dom = XML::LibXML->load_xml( string => (\$xml) );
 #    eval { $xmlschema->validate( $dom ); };
 #    die "$@" if $@;
     $report->sendit->send_rua(\$aggregate, \$xml) # deliver via SMTP/HTTP
         and $report->store->delete_report($aggregate->metadata->report_id);
-    print "sleeping 2";
-    foreach ( 1 .. 2 ) { print '.'; sleep 1; };
+    print "sleeping 5";
+    foreach ( 1 .. 5 ) { print '.'; sleep 1; };
     print "done.\n";
 };
 
@@ -45,7 +46,7 @@ dmarc_send_reports - send aggregate reports to requestors
 
 =head1 VERSION
 
-version 1.20130601
+version 1.20130604
 
 =head1 AUTHORS
 
