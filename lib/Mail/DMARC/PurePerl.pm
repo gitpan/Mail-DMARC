@@ -1,5 +1,5 @@
 package Mail::DMARC::PurePerl;
-our $VERSION = '1.20140711'; # VERSION
+our $VERSION = '1.20141030'; # VERSION
 use strict;
 use warnings;
 
@@ -65,10 +65,12 @@ sub validate {
 
     # The stated percentage of messages that fail the DMARC test MUST be
     # subjected to whatever policy is selected by the "p" or "sp" tag
-    if ( int( rand(100) ) >= $policy->pct ) {
-        $self->result->reason( type => 'sampled_out' );
+    if ( int( rand(100) ) < $policy->pct ) {
+        $self->result->disposition($effective_p);
         return $self->result;
     }
+
+    $self->result->reason( type => 'sampled_out' );
 
     # Those that are not thus selected MUST instead be subjected to the next
     # policy lower in terms of severity.  In decreasing order of severity,
@@ -543,7 +545,7 @@ Mail::DMARC::PurePerl - Pure Perl implementation of DMARC
 
 =head1 VERSION
 
-version 1.20140711
+version 1.20141030
 
 =head1 METHODS
 
